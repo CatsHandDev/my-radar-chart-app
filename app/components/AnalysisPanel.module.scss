@@ -1,0 +1,11 @@
+.panelContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chartContainer {
+  width: 100%;
+  max-width: 500px;
+  height: 500px;
+}

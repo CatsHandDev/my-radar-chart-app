@@ -1,133 +1,92 @@
 "use client";
-import { useState, useMemo } from 'react';
-import RadarChart from './components/RadarChart';
 
-// 項目の型定義
-interface ChartItem {
-  id: number;
-  label: string;
-  value: number;
-}
+import { useState, useMemo } from 'react';
+import { ChartItem } from './types';
+import SettingsPanel from './components/SettingsPanel';
+import AnalysisPanel from './components/AnalysisPanel';
+import styles from './page.module.scss';
 
 export default function Home() {
-  // レーダーチャートの項目リスト
+  // --- 状態管理 (State) ---
   const [items, setItems] = useState<ChartItem[]>([
-    { id: 1, label: '項目A', value: 80 },
-    { id: 2, label: '項目B', value: 50 },
-    { id: 3, label: '項目C', value: 70 },
-    { id: 4, label: '項目D', value: 30 },
-    { id: 5, label: '項目E', value: 90 },
+    { id: 1, label: 'リーダーシップ', value: 85 },
+    { id: 2, label: '技術力', value: 90 },
+    { id: 3, label: 'コミュニケーション', value: 60 },
+    { id: 4, label: '計画性', value: 55 },
+    { id: 5, label: '実行力', value: 75 },
   ]);
-
-  // ボーダーラインの値
-  const [borderValue, setBorderValue] = useState<number>(60);
-
-  // SWOT分析用の状態
+  const [borderValue, setBorderValue] = useState<number>(70);
   const [opportunities, setOpportunities] = useState<string>('');
   const [threats, setThreats] = useState<string>('');
-
-  // AIからのアドバイス
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const strengths = useMemo(() =>
-    items.filter(item => item.value >= borderValue),
-    [items, borderValue]
-  );
+  // --- 派生状態 ---
+  const strengths = useMemo(() => items.filter(item => item.value >= borderValue), [items, borderValue]);
+  const weaknesses = useMemo(() => items.filter(item => item.value < borderValue), [items, borderValue]);
 
-  const weaknesses = useMemo(() =>
-    items.filter(item => item.value < borderValue),
-    [items, borderValue]
-  );
+  // --- イベントハンドラ ---
+  const handleItemChange = (id: number, field: 'label' | 'value', val: string | number) => {
+    setItems(prev => prev.map(item => (item.id === id ? { ...item, [field]: val } : item)));
+  };
+  const addItem = () => setItems([...items, { id: Date.now(), label: `新規項目${items.length + 1}`, value: 50 }]);
+  const removeItem = (id: number) => setItems(items.filter(item => item.id !== id));
 
-    const handleAnalyze = async () => {
+  const handleAnalyze = async () => {
     setIsLoading(true);
     setAiAdvice('');
-
-    const swotData = {
-      strengths: strengths.map(item => item.label),
-      weaknesses: weaknesses.map(item => item.label),
-      opportunities,
-      threats,
-    };
-
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(swotData),
+        body: JSON.stringify({
+          strengths: strengths.map(item => item.label),
+          weaknesses: weaknesses.map(item => item.label),
+          opportunities,
+          threats,
+        }),
       });
-
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
-
+      if (!response.ok) throw new Error('API request failed');
       const data = await response.json();
       setAiAdvice(data.advice);
     } catch (error) {
-      console.error('Failed to get AI advice:', error);
+      console.error('AI分析のAPI呼び出しに失敗:', error);
       setAiAdvice('分析に失敗しました。時間をおいて再度お試しください。');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- レンダリング ---
   return (
-    <main>
-      <h1>レーダーチャート SWOT分析アプリ</h1>
-      <div style={{ width: '500px', height: '500px' }}>
-        <RadarChart
-          labels={items.map(item => item.label)}
-          values={items.map(item => item.value)}
+    <main className={styles.mainContainer}>
+      <header className={styles.header}>
+        <h1>レーダーチャート SWOT分析 & AIアドバイス</h1>
+      </header>
+
+      <div className={styles.contentWrapper}>
+        <SettingsPanel
+          items={items}
           borderValue={borderValue}
+          onItemChange={handleItemChange}
+          onAddItem={addItem}
+          onRemoveItem={removeItem}
+          onBorderValueChange={setBorderValue}
+        />
+        <AnalysisPanel
+          items={items}
+          borderValue={borderValue}
+          strengths={strengths}
+          weaknesses={weaknesses}
+          opportunities={opportunities}
+          threats={threats}
+          aiAdvice={aiAdvice}
+          isLoading={isLoading}
+          onOpportunitiesChange={setOpportunities}
+          onThreatsChange={setThreats}
+          onAnalyze={handleAnalyze}
         />
       </div>
-      <div>
-        <h2>SWOT分析</h2>
-        <div>
-          <h3>強み (Strengths)</h3>
-          <ul>
-            {strengths.map(item => <li key={item.id}>{item.label} ({item.value})</li>)}
-          </ul>
-        </div>
-        <div>
-          <h3>弱み (Weaknesses)</h3>
-          <ul>
-            {weaknesses.map(item => <li key={item.id}>{item.label} ({item.value})</li>)}
-          </ul>
-        </div>
-        <div>
-          <h3>機会 (Opportunities)</h3>
-          <textarea
-            value={opportunities}
-            onChange={(e) => setOpportunities(e.target.value)}
-            rows={4}
-            style={{ width: '100%' }}
-          />
-        </div>
-        <div>
-          <h3>脅威 (Threats)</h3>
-          <textarea
-            value={threats}
-            onChange={(e) => setThreats(e.target.value)}
-            rows={4}
-            style={{ width: '100%' }}
-          />
-        </div>
-      </div>
-
-      <button onClick={handleAnalyze} disabled={isLoading}>
-        {isLoading ? '分析中...' : 'AIにアドバイスを求める'}
-      </button>
-
-      {aiAdvice && (
-        <div>
-          <h3>AIからのアドバイス</h3>
-          <pre style={{ whiteSpace: 'pre-wrap', background: '#f4f4f4', padding: '1rem' }}>
-            {aiAdvice}
-          </pre>
-        </div>
-      )}
     </main>
   );
 }

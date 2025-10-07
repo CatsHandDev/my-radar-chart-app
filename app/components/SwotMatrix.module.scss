@@ -1,0 +1,52 @@
+.matrixContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 800px;
+  margin-top: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.cell {
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h3 {
+    margin-top: 0;
+    border-bottom: 2px solid;
+    padding-bottom: 0.5rem;
+  }
+
+  ul {
+    padding-left: 1.2rem;
+    margin: 0;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-size: 1rem;
+    resize: vertical;
+  }
+}
+
+.strengths {
+  h3 { border-color: #4caf50; } // 強み: 緑
+}
+.weaknesses {
+  h3 { border-color: #f44336; } // 弱み: 赤
+}
+.opportunities {
+  h3 { border-color: #2196f3; } // 機会: 青
+}
+.threats {
+  h3 { border-color: #ff9800; } // 脅威: オレンジ
+}
