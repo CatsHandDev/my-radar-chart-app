@@ -17,14 +17,7 @@ export const BORDER_PERCENTAGES: Record<BorderType, number> = {
 };
 
 export default function Home() {
-  const [items, setItems] = useState<ChartItem[]>([
-    { id: 1, label: '段ボール作成', value: 85, maxValue: 180 },
-    { id: 2, label: 'アタック箱詰め', value: 90, maxValue: 120 },
-    { id: 3, label: '荷受け', value: 60, maxValue: 200 },
-    { id: 4, label: 'ピッキング', value: 55, maxValue: 300 },
-    { id: 5, label: '箱出し', value: 75, maxValue: 120 },
-    { id: 6, label: '梱包', value: 75, maxValue: 120 },
-  ]);
+  const [items, setItems] = useState<ChartItem[]>([]);
   const [opportunities, setOpportunities] = useState<string>('');
   const [threats, setThreats] = useState<string>('');
   const [aiAdvice, setAiAdvice] = useState<string>('');
@@ -34,6 +27,32 @@ export default function Home() {
 
   // --- 派生状態 ---
   const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
+
+  const templates = {
+    business: [
+      { id: 1, label: 'リーダーシップ', value: 0, maxValue: 100 },
+      { id: 2, label: '問題解決能力', value: 0, maxValue: 100 },
+      { id: 3, label: 'コミュニケーション', value: 0, maxValue: 100 },
+      { id: 4, label: '計画性', value: 0, maxValue: 100 },
+      { id: 5, label: '実行力', value: 0, maxValue: 100 },
+    ],
+    student: [
+      { id: 1, label: '専門知識', value: 0, maxValue: 100 },
+      { id: 2, label: '探求心', value: 0, maxValue: 100 },
+      { id: 3, label: 'プレゼン能力', value: 0, maxValue: 100 },
+      { id: 4, label: '協調性', value: 0, maxValue: 100 },
+      { id: 5, label: '自己管理能力', value: 0, maxValue: 100 },
+    ],
+  };
+
+    const handleLoadTemplate = (templateType: 'business' | 'student') => {
+    // テンプレートのデータをディープコピーして、IDを現在時刻でユニークにする
+    const newItems = templates[templateType].map(item => ({
+      ...item,
+      id: Date.now() + Math.random() // ユニークIDを生成
+    }));
+    setItems(newItems);
+  };
 
   const strengths = useMemo(() =>
     items.filter(item => (item.value / item.maxValue) >= currentBorderPercentage),
@@ -107,6 +126,7 @@ export default function Home() {
             onRemoveItem={removeItem}
             selectedBorder={selectedBorder}
             onBorderChange={setSelectedBorder}
+            onLoadTemplate={handleLoadTemplate}
           />
         </TabPanel>
 

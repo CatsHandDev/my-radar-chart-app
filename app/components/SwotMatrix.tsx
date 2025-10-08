@@ -24,8 +24,8 @@ const SwotMatrix: React.FC<AnalysisMatrixProps> = ({
   borderType,
 }) => {
   const borderLabels = {
-    A: 'A型基準 (65%)',
-    B: 'B型基準 (45%)',
+    A: '65%',
+    B: '45%',
   };
   const currentLabel = borderLabels[borderType];
 
