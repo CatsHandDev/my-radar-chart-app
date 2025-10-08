@@ -1,52 +1,49 @@
 import React from 'react';
-import styles from './SwotMatrix.module.scss';
+import { ChartItem } from '../types';
+import { BorderType } from '../page';
+import styles from './AnalysisMatrix.module.scss';
 
-// propsの型定義
-interface SwotMatrixProps {
-  strengths: { id: number; label: string; value: number }[];
-  weaknesses: { id: number; label: string; value: number }[];
+// propsの型定義を新しい仕様に合わせる
+interface AnalysisMatrixProps {
+  strengths: ChartItem[]; // 66%以上の項目
+  weaknesses: ChartItem[]; // 33%未満の項目
   opportunities: string;
   setOpportunities: (value: string) => void;
   threats: string;
   setThreats: (value: string) => void;
+  borderType: BorderType;
 }
 
-const SwotMatrix: React.FC<SwotMatrixProps> = ({
+const SwotMatrix: React.FC<AnalysisMatrixProps> = ({
   strengths,
   weaknesses,
   opportunities,
   setOpportunities,
   threats,
   setThreats,
+  borderType,
 }) => {
-  return (
-    <div className={styles.matrixContainer}>
-      {/* 強み (Strengths) */}
-      <div className={`${styles.cell} ${styles.strengths}`}>
-        <h3>強み (Strengths)</h3>
-        {strengths.length > 0 ? (
-          <ul>
-            {strengths.map((item) => (
-              <li key={item.id}>{`${item.label} (${item.value})`}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>基準値以上の項目はありません。</p>
-        )}
-      </div>
+  const borderLabels = {
+    A: 'A型基準 (65%)',
+    B: 'B型基準 (45%)',
+  };
+  const currentLabel = borderLabels[borderType];
 
-      {/* 弱み (Weaknesses) */}
+return (
+    <div className={styles.matrixContainer}>
+      <div className={`${styles.cell} ${styles.strengths}`}>
+        {/* ★ 変更点: 見出しを動的にする */}
+        <h3>強み ({currentLabel} 以上)</h3>
+        {strengths.length > 0 ? (
+          <ul>{strengths.map(item => <li key={item.id}>{`${item.label} (${item.value})`}</li>)}</ul>
+        ) : <p>基準値以上の項目はありません。</p>}
+      </div>
       <div className={`${styles.cell} ${styles.weaknesses}`}>
-        <h3>弱み (Weaknesses)</h3>
+        {/* ★ 変更点: 見出しを動的にする */}
+        <h3>弱み ({currentLabel} 未満)</h3>
         {weaknesses.length > 0 ? (
-          <ul>
-            {weaknesses.map((item) => (
-              <li key={item.id}>{`${item.label} (${item.value})`}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>基準値未満の項目はありません。</p>
-        )}
+          <ul>{weaknesses.map(item => <li key={item.id}>{`${item.label} (${item.value})`}</li>)}</ul>
+        ) : <p>基準値未満の項目はありません。</p>}
       </div>
 
       {/* 機会 (Opportunities) */}

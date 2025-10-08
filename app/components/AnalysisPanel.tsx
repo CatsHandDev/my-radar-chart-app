@@ -1,14 +1,39 @@
-import React from 'react';
-import { Button, Box, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Button, Box, Typography, Tabs, Tab } from '@mui/material';
 import { ChartItem } from '../types';
 import RadarChart from './RadarChart';
 import SwotMatrix from './SwotMatrix';
-import styles from './AnalysisPanel.module.scss';
+import styles from './AnalysisMatrix.module.scss';
+import { BorderType } from '../page';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`analysis-tabpanel-${index}`}
+      aria-labelledby={`analysis-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 // AnalysisPanelが受け取るpropsの型を定義
 interface AnalysisPanelProps {
   items: ChartItem[];
-  borderValue: number;
   strengths: ChartItem[];
   weaknesses: ChartItem[];
   opportunities: string;
@@ -18,11 +43,12 @@ interface AnalysisPanelProps {
   onOpportunitiesChange: (value: string) => void;
   onThreatsChange: (value: string) => void;
   onAnalyze: () => void;
+  borderPercentage: number;
+  borderType: BorderType;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   items,
-  borderValue,
   strengths,
   weaknesses,
   opportunities,
@@ -32,36 +58,81 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   onOpportunitiesChange,
   onThreatsChange,
   onAnalyze,
+  borderPercentage,
+  borderType,
 }) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const percentageValues = items.map(item =>
+    item.maxValue > 0 ? (item.value / item.maxValue) * 100 : 0
+  );
+
+  // ★ 変更点 2: ボーダーラインの値もパーセンテージに変換
+  const borderLineValue = borderPercentage * 100;
+  const borderLine = {
+    label: `${borderType}型基準 (${Math.round(borderLineValue)}%)`,
+    // 全ての項目で同じパーセンテージの値を持つ配列を作成
+    values: Array(items.length).fill(borderLineValue),
+    color: borderType === 'A' ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',
+  };
+
   return (
     <div className={styles.panelContainer}>
+      {/* 1. 上部: レーダーチャート (常に表示) */}
       <div className={styles.chartContainer}>
         <RadarChart
-          labels={items.map((item) => item.label)}
-          values={items.map((item) => item.value)}
-          borderValue={borderValue}
+          labels={items.map(item => item.label)}
+          values={percentageValues}
+          borderLines={[borderLine]}
         />
       </div>
 
-      <SwotMatrix
-        strengths={strengths}
-        weaknesses={weaknesses}
-        opportunities={opportunities}
-        setOpportunities={onOpportunitiesChange}
-        threats={threats}
-        setThreats={onThreatsChange}
-      />
+      {/* 2. 下部: タブ切り替えUI */}
+      <Box sx={{ width: '100%', mt: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={activeTab} onChange={handleTabChange} aria-label="analysis tabs" centered>
+            <Tab label="SWOT分析" id="analysis-tab-0" />
+            <Tab label="アドバイス" id="analysis-tab-1" />
+          </Tabs>
+        </Box>
 
-      <Box sx={{ mt: 3, width: '100%', maxWidth: '800px' }}>
-        <Button variant="contained" onClick={onAnalyze} disabled={isLoading} fullWidth>
-          {isLoading ? '分析中...' : 'AIにアドバイスを求める'}
-        </Button>
-        {aiAdvice && (
-          <Box sx={{ mt: 2, p: 2, background: '#f4f4f4', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
-            <Typography variant="h6">AIからのアドバイス</Typography>
-            <Typography component="p">{aiAdvice}</Typography>
+        {/* SWOT分析タブのコンテンツ */}
+        <TabPanel value={activeTab} index={0}>
+          <SwotMatrix
+            strengths={strengths}
+            weaknesses={weaknesses}
+            opportunities={opportunities}
+            setOpportunities={onOpportunitiesChange}
+            threats={threats}
+            setThreats={onThreatsChange}
+            borderType={borderType}
+          />
+        </TabPanel>
+
+        {/* AIアドバイスタブのコンテンツ */}
+        <TabPanel value={activeTab} index={1}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={onAnalyze}
+              disabled={isLoading}
+              fullWidth
+              sx={{ maxWidth: '400px' }}
+            >
+              {isLoading ? '分析中...' : 'アドバイスを求める'}
+            </Button>
+            {aiAdvice && (
+              <Box sx={{ width: '100%', mt: 2, p: 2, background: '#f4f4f4', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                <Typography variant="h6">アドバイス</Typography>
+                <Typography component="p">{aiAdvice}</Typography>
+              </Box>
+            )}
           </Box>
-        )}
+        </TabPanel>
       </Box>
     </div>
   );

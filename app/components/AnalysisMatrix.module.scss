@@ -1,10 +1,15 @@
+.panelContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .matrixContainer {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   width: 100%;
   max-width: 800px;
-  margin-top: 2rem;
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 1rem;

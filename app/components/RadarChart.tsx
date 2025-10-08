@@ -8,6 +8,7 @@ import {
   Filler,
   Tooltip,
   Legend,
+  type TooltipItem,
 } from 'chart.js';
 
 ChartJS.register(
@@ -19,13 +20,28 @@ ChartJS.register(
   Legend
 );
 
+interface BorderLine {
+  label: string;
+  values: number[];
+  color: string;
+}
+
 interface RadarChartProps {
   labels: string[];
   values: number[];
-  borderValue: number;
+  borderLines: BorderLine[];
 }
 
-const RadarChart: React.FC<RadarChartProps> = ({ labels, values, borderValue }) => {
+const RadarChart: React.FC<RadarChartProps> = ({ labels, values, borderLines }) => {
+  const borderDatasets = borderLines.map(line => ({
+    label: line.label,
+    data: line.values,
+    borderColor: line.color,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    pointRadius: 0,
+  }));
+
   const data = {
     labels: labels,
     datasets: [
@@ -36,29 +52,45 @@ const RadarChart: React.FC<RadarChartProps> = ({ labels, values, borderValue }) 
         borderColor: 'rgba(54, 162, 235, 1)',
         borderWidth: 2,
       },
-      {
-        label: 'ボーダー',
-        // 全ての項目でボーダー値を持つ配列を作成
-        data: Array(labels.length).fill(borderValue),
-        borderColor: 'rgba(255, 99, 132, 1)',
-        backgroundColor: 'rgba(255, 99, 132, 0)', // 内側は塗りつぶさない
-        borderWidth: 2,
-        pointRadius: 0, // ボーダーラインの点は非表示
-      },
+      ...borderDatasets,
     ],
   };
 
   const options = {
     scales: {
-      r: {
-        angleLines: {
-          display: true,
+      r: { // r は radial axis (放射軸) の設定
+        angleLines: { display: true },
+        // suggestedMin/Max の代わりに min/max を使用してスケールを完全に固定
+        min: 0,
+        max: 100,
+        // 目盛りの設定 (UX向上のためのオプション)
+        ticks: {
+          stepSize: 20, // 20%ごとに目盛りを表示
+          // 目盛りの数値に '%' をつける
+          callback: function (value: string | number) {
+            return value + '%';
+          },
         },
-        suggestedMin: 0,
-        suggestedMax: 100, // 例えば0から100の範囲
       },
     },
     maintainAspectRatio: false,
+    // ★ ツールチップに表示される内容も '%' をつけるとより分かりやすい
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function (context: TooltipItem<'radar'>) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.r !== null) {
+              label += context.parsed.r.toFixed(1) + '%'; // 小数点1桁まで表示
+            }
+            return label;
+          }
+        }
+      }
+    }
   };
 
   return <Radar data={data} options={options} />;

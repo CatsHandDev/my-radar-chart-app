@@ -6,12 +6,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const { strengths, weaknesses, opportunities, threats } = await request.json();
+    const { borderType, strengths, weaknesses, opportunities, threats } = await request.json();
 
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
-      以下のSWOT分析の結果に基づいて、プロフェッショナルな視点から具体的な改善策や戦略を3つ提案してください。
+      以下の分析結果について、プロフェッショナルな視点から具体的な改善策や戦略を3つ提案してください。
+      この分析は「${borderType}ランク基準 (${borderType === 'A' ? '66%' : '33%'})」という基準値に基づいて行われています。
 
       # 強み (Strengths)
       ${strengths.length > 0 ? strengths.join(', ') : '特になし'}
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
 
     return NextResponse.json({ advice: text });
