@@ -10,9 +10,7 @@ interface SettingsPanelProps {
   onItemChange: (id: number, field: 'label' | 'value', value: string | number) => void;
   onAddItem: () => void;
   onRemoveItem: (id: number) => void;
-  selectedBorder: BorderType; // ★ 選択中のボーダーを受け取る
-  onBorderChange: (newBorder: BorderType) => void; // ★ ボーダー変更関数を受け取る
-  onLoadTemplate: (templateType: 'business' | 'student') => void;
+  onLoadTemplate: (templateType: 'classA' | 'classB') => void;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -20,48 +18,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onItemChange,
   onAddItem,
   onRemoveItem,
-  selectedBorder,
-  onBorderChange,
   onLoadTemplate,
 }) => {
-    const handleBorderChange = (
-    event: React.MouseEvent<HTMLElement>,
-    newBorder: BorderType | null,
-  ) => {
-    if (newBorder !== null) {
-      onBorderChange(newBorder);
-    }
-  };
-
   return (
     <Grid container spacing={4}>
       {/* --- 左カラム: 既存の設定UI --- */}
       <Grid sx={{ xs: 12, md: 6}}>
         <Box sx={{ border: '1px solid #ccc', borderRadius: '8px', p: 2 }}>
           <Typography variant="h6" gutterBottom>設定</Typography>
-
-          {/* ボーダー選択UI */}
-          <Box sx={{ mb: 2 }}>
-            <Typography gutterBottom>評価基準の選択</Typography>
-            <ToggleButtonGroup
-              value={selectedBorder}
-              exclusive
-              onChange={handleBorderChange}
-              aria-label="border selection"
-            >
-              <ToggleButton value="A" aria-label="A-rank border">
-                A型基準 (65%)
-              </ToggleButton>
-              <ToggleButton value="B" aria-label="B-rank border">
-                B型基準 (45%)
-              </ToggleButton>
-            </ToggleButtonGroup>
-
-            {/* 選択中の基準値を表示 */}
-            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-              現在の基準: {Math.round(BORDER_PERCENTAGES[selectedBorder] * 100)}%
-            </Typography>
-          </Box>
 
           {items.map((item) => (
             <Box
@@ -76,7 +40,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 onChange={(e) => onItemChange(item.id, 'label', e.target.value)}
               />
               <TextField
-                label="値"
+                label="実績/h"
                 variant="outlined"
                 type="number"
                 size="small"
@@ -85,12 +49,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 sx={{ width: '80px' }}
               />
 
-              <Typography
+              {/* <Typography
                 variant="body2"
                 sx={{ color: 'text.secondary', minWidth: '80px', textAlign: 'center' }}
               >
-                (最大: {item.maxValue})
-              </Typography>
+                (基準値: {item.maxValue})
+              </Typography> */}
 
               <Button
                 size="small"
@@ -148,8 +112,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </Typography>
             </CardContent>
             <CardActions>
-              <Button size="small" onClick={() => onLoadTemplate('business')}>ビジネススキル</Button>
-              <Button size="small" onClick={() => onLoadTemplate('student')}>学生向け</Button>
+              <Button size="small" onClick={() => onLoadTemplate('classA')}>高い目標</Button>
+              <Button size="small" onClick={() => onLoadTemplate('classB')}>基礎目標</Button>
             </CardActions>
           </Card>
         </Box>

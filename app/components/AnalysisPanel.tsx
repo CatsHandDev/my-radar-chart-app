@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Box, Typography, Tabs, Tab } from '@mui/material';
+import { Button, Box, Typography, Tabs, Tab, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { ChartItem } from '../types';
 import RadarChart from './RadarChart';
 import SwotMatrix from './SwotMatrix';
 import styles from './AnalysisMatrix.module.scss';
-import { BorderType } from '../page';
+import { BorderType, BORDER_PERCENTAGES } from '../page';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -45,6 +45,7 @@ interface AnalysisPanelProps {
   onAnalyze: () => void;
   borderPercentage: number;
   borderType: BorderType;
+  onBorderChange: (newBorder: BorderType) => void;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -60,6 +61,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   onAnalyze,
   borderPercentage,
   borderType,
+  onBorderChange,
 }) => {
   const [activeTab, setActiveTab] = useState(0);
 
@@ -71,7 +73,17 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
     item.maxValue > 0 ? (item.value / item.maxValue) * 100 : 0
   );
 
-  // ★ 変更点 2: ボーダーラインの値もパーセンテージに変換
+    // SettingsPanelから移動してきたハンドラ
+  const handleBorderChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newBorder: BorderType | null,
+  ) => {
+    if (newBorder !== null) {
+      onBorderChange(newBorder);
+    }
+  };
+
+  // 変更点 2: ボーダーラインの値もパーセンテージに変換
   const borderLineValue = borderPercentage * 100;
   const borderLine = {
     label: `${borderType}型基準 (${Math.round(borderLineValue)}%)`,
@@ -82,13 +94,31 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
 
   return (
     <div className={styles.panelContainer}>
-      {/* 1. 上部: レーダーチャート (常に表示) */}
-      <div className={styles.chartContainer}>
-        <RadarChart
-          labels={items.map(item => item.label)}
-          values={percentageValues}
-          borderLines={[borderLine]}
-        />
+      <div>
+        {/* 1. 上部: レーダーチャート (常に表示) */}
+        <div className={styles.chartContainer}>
+          <RadarChart
+            labels={items.map(item => item.label)}
+            values={percentageValues}
+            borderLines={[borderLine]}
+          />
+        </div>
+
+        <Box sx={{ my: 2, p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #eee', borderRadius: '8px' }}>
+          <Typography gutterBottom>評価基準の選択</Typography>
+          <ToggleButtonGroup
+            value={borderType} // selectedBorderの代わりにborderTypeを使用
+            exclusive
+            onChange={handleBorderChange}
+            aria-label="border selection"
+          >
+            <ToggleButton value="A" aria-label="A-rank border">高い目標</ToggleButton>
+            <ToggleButton value="B" aria-label="B-rank border">基礎目標</ToggleButton>
+          </ToggleButtonGroup>
+          <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+            現在の基準: {Math.round(BORDER_PERCENTAGES[borderType] * 100)}%
+          </Typography>
+        </Box>
       </div>
 
       {/* 2. 下部: タブ切り替えUI */}

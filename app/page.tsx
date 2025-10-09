@@ -25,6 +25,11 @@ export default function Home() {
   const [selectedBorder, setSelectedBorder] = useState<BorderType>('A');
   const [activeTab, setActiveTab] = useState(0);
 
+  const chartableItems = useMemo(() =>
+    items.filter(item => item.value != null && item.value > 0),
+    [items]
+  );
+
   // --- 派生状態 ---
   const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
 
@@ -36,7 +41,7 @@ export default function Home() {
       { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
       { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
     ],
-    student: [
+    classB: [
       { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
       { id: 2, label: '箱出し（60以上）', value: 0, maxValue: 120 },
       { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
@@ -45,7 +50,7 @@ export default function Home() {
     ],
   };
 
-    const handleLoadTemplate = (templateType: 'classA' | 'student') => {
+    const handleLoadTemplate = (templateType: 'classA' | 'classB') => {
     // テンプレートのデータをディープコピーして、IDを現在時刻でユニークにする
     const newItems = templates[templateType].map(item => ({
       ...item,
@@ -55,12 +60,12 @@ export default function Home() {
   };
 
   const strengths = useMemo(() =>
-    items.filter(item => (item.value / item.maxValue) >= currentBorderPercentage),
-    [items, currentBorderPercentage]
+    chartableItems.filter(item => (item.value / item.maxValue) >= currentBorderPercentage),
+    [chartableItems, currentBorderPercentage] // 依存配列を更新
   );
   const weaknesses = useMemo(() =>
-    items.filter(item => (item.value / item.maxValue) < currentBorderPercentage),
-    [items, currentBorderPercentage]
+    chartableItems.filter(item => (item.value / item.maxValue) < currentBorderPercentage),
+    [chartableItems, currentBorderPercentage] // 依存配列を更新
   );
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -124,8 +129,6 @@ export default function Home() {
             onItemChange={handleItemChange}
             onAddItem={addItem}
             onRemoveItem={removeItem}
-            selectedBorder={selectedBorder}
-            onBorderChange={setSelectedBorder}
             onLoadTemplate={handleLoadTemplate}
           />
         </TabPanel>
@@ -133,7 +136,7 @@ export default function Home() {
         {/* 3. 「分析結果」タブのコンテンツ */}
         <TabPanel value={activeTab} index={1}>
           <AnalysisPanel
-            items={items}
+            items={chartableItems}
             strengths={strengths}
             weaknesses={weaknesses}
             borderPercentage={currentBorderPercentage}
@@ -145,6 +148,7 @@ export default function Home() {
             onOpportunitiesChange={setOpportunities}
             onThreatsChange={setThreats}
             onAnalyze={handleAnalyze}
+            onBorderChange={setSelectedBorder}
           />
         </TabPanel>
       </Box>
