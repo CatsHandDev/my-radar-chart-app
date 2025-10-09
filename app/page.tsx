@@ -29,23 +29,23 @@ export default function Home() {
   const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
 
   const templates = {
-    business: [
-      { id: 1, label: 'リーダーシップ', value: 0, maxValue: 100 },
-      { id: 2, label: '問題解決能力', value: 0, maxValue: 100 },
-      { id: 3, label: 'コミュニケーション', value: 0, maxValue: 100 },
-      { id: 4, label: '計画性', value: 0, maxValue: 100 },
-      { id: 5, label: '実行力', value: 0, maxValue: 100 },
+    classA: [
+      { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
+      { id: 2, label: '箱出し（60以上）', value: 0, maxValue: 120 },
+      { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
+      { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
+      { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
     ],
     student: [
-      { id: 1, label: '専門知識', value: 0, maxValue: 100 },
-      { id: 2, label: '探求心', value: 0, maxValue: 100 },
-      { id: 3, label: 'プレゼン能力', value: 0, maxValue: 100 },
-      { id: 4, label: '協調性', value: 0, maxValue: 100 },
-      { id: 5, label: '自己管理能力', value: 0, maxValue: 100 },
+      { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
+      { id: 2, label: '箱出し（60以上）', value: 0, maxValue: 120 },
+      { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
+      { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
+      { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
     ],
   };
 
-    const handleLoadTemplate = (templateType: 'business' | 'student') => {
+    const handleLoadTemplate = (templateType: 'classA' | 'student') => {
     // テンプレートのデータをディープコピーして、IDを現在時刻でユニークにする
     const newItems = templates[templateType].map(item => ({
       ...item,
