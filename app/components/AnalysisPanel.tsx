@@ -86,7 +86,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   // 変更点 2: ボーダーラインの値もパーセンテージに変換
   const borderLineValue = borderPercentage * 100;
   const borderLine = {
-    label: `${borderType}型基準 (${Math.round(borderLineValue)}%)`,
+    label: `${borderType === 'A' ? '高い目標' : '基礎目標'} (${Math.round(borderLineValue)}%)`,
     // 全ての項目で同じパーセンテージの値を持つ配列を作成
     values: Array(items.length).fill(borderLineValue),
     color: borderType === 'A' ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',

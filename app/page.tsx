@@ -16,8 +16,25 @@ export const BORDER_PERCENTAGES: Record<BorderType, number> = {
   B: 0.45,
 };
 
+const templates = {
+  classA: [
+    { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
+    { id: 2, label: '箱出し（60サイズ以上）', value: 0, maxValue: 120 },
+    { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
+    { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
+    { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
+  ],
+  classB: [
+    { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
+    { id: 2, label: '箱出し（60サイズ以上）', value: 0, maxValue: 120 },
+    { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
+    { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
+    { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
+  ],
+};
+
 export default function Home() {
-  const [items, setItems] = useState<ChartItem[]>([]);
+  const [items, setItems] = useState<ChartItem[]>(templates.classA);
   const [opportunities, setOpportunities] = useState<string>('');
   const [threats, setThreats] = useState<string>('');
   const [aiAdvice, setAiAdvice] = useState<string>('');
@@ -33,24 +50,7 @@ export default function Home() {
   // --- 派生状態 ---
   const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
 
-  const templates = {
-    classA: [
-      { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: 2, label: '箱出し（60以上）', value: 0, maxValue: 120 },
-      { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
-      { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
-      { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
-    ],
-    classB: [
-      { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: 2, label: '箱出し（60以上）', value: 0, maxValue: 120 },
-      { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
-      { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
-      { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
-    ],
-  };
-
-    const handleLoadTemplate = (templateType: 'classA' | 'classB') => {
+  const handleLoadTemplate = (templateType: 'classA' | 'classB') => {
     // テンプレートのデータをディープコピーして、IDを現在時刻でユニークにする
     const newItems = templates[templateType].map(item => ({
       ...item,

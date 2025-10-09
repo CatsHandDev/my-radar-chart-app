@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, TextField, Box, Typography, ToggleButton, ToggleButtonGroup, Accordion, AccordionDetails, AccordionSummary, Card, CardActions, CardContent, Grid } from '@mui/material';
 import { ChartItem } from '../types';
-import { BorderType, BORDER_PERCENTAGES } from '../page';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 // SettingsPanelが受け取るpropsの型を定義
@@ -61,7 +61,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 color="error"
                 onClick={() => onRemoveItem(item.id)}
               >
-                削除
+                <DeleteIcon />
               </Button>
             </Box>
           ))}
@@ -85,8 +85,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    <b>Aランク基準(66%)</b>は、高い目標を設定し、自身の強みをさらに伸ばしたい場合に使用します。<br/>
-                    <b>Bランク基準(33%)</b>は、基礎的な能力が身についているかを確認し、弱点の克服を目指す場合におすすめです。
+                    <b>高い基準(65%)</b>は、高い目標を設定し、自身の強みをさらに伸ばしたい場合に使用します。<br/>
+                    <b>基礎基準(45%)</b>は、基礎的な能力が身についているかを確認し、弱点の克服を目指す場合におすすめです。
                   </Typography>
                 </AccordionDetails>
               </Accordion>
