@@ -1,6 +1,5 @@
 import React from 'react';
-import { ChartItem } from '../types';
-import { BorderType } from '../page';
+import { ChartItem, BorderType } from '../types';
 import styles from './AnalysisMatrix.module.scss';
 
 // propsの型定義を新しい仕様に合わせる
@@ -29,17 +28,17 @@ const SwotMatrix: React.FC<AnalysisMatrixProps> = ({
   };
   const currentLabel = borderLabels[borderType];
 
-return (
+  return (
     <div className={styles.matrixContainer}>
       <div className={`${styles.cell} ${styles.strengths}`}>
-        {/* ★ 変更点: 見出しを動的にする */}
+        {/* 見出しを動的にする */}
         <h3>強み ({currentLabel} 以上)</h3>
         {strengths.length > 0 ? (
           <ul>{strengths.map(item => <li key={item.id}>{`${item.label} (${item.value})`}</li>)}</ul>
         ) : <p>基準値以上の項目はありません。</p>}
       </div>
       <div className={`${styles.cell} ${styles.weaknesses}`}>
-        {/* ★ 変更点: 見出しを動的にする */}
+        {/* 見出しを動的にする */}
         <h3>弱み ({currentLabel} 未満)</h3>
         {weaknesses.length > 0 ? (
           <ul>{weaknesses.map(item => <li key={item.id}>{`${item.label} (${item.value})`}</li>)}</ul>

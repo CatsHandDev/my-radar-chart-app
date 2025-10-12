@@ -1,6 +1,11 @@
 .panelContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 35% 63%;
+  gap: 2%;
 }
 
+.chartContainer {
+  width: 100%;
+  max-width: 100%;
+  height: 400px;
+}

@@ -1,156 +1,234 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { ChartItem } from './types';
+import React, { useState, useMemo } from 'react';
+import { UserDataset } from './types';
 import SettingsPanel from './components/SettingsPanel';
 import AnalysisPanel from './components/AnalysisPanel';
-import styles from './page.module.scss';
 import TabPanel from './components/TabPanel';
-import Box from '@mui/material/Box';
-import { Tabs, Tab } from '@mui/material';
+import styles from './page.module.scss';
+import { templates } from './data/initialData';
+import { userMasterData } from './data/confidentialData';
+import { Box } from '@mui/material';
+import Sidebar from './components/Sidebar';
+import ConfidentialPanel from './components/ConfidentialPanel';
+import { useAuth } from './hooks/useAuth';
 
-export type BorderType = 'A' | 'B';
-
-export const BORDER_PERCENTAGES: Record<BorderType, number> = {
-  A: 0.65,
-  B: 0.45,
-};
-
-const templates = {
-  classA: [
-    { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
-    { id: 2, label: '箱出し（60サイズ以上）', value: 0, maxValue: 120 },
-    { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
-    { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
-    { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
-  ],
-  classB: [
-    { id: 1, label: '段ボール作成', value: 0, maxValue: 140 },
-    { id: 2, label: '箱出し（60サイズ以上）', value: 0, maxValue: 120 },
-    { id: 3, label: '箱出し（ネコポス・コンパクト）', value: 0, maxValue: 300 },
-    { id: 4, label: 'ピッキング（60以上）', value: 0, maxValue: 360 },
-    { id: 5, label: 'ピッキング（ネコポス・コンパクト）', value: 0, maxValue: 400 },
-  ],
-};
+const drawerWidth = 240;
 
 export default function Home() {
-  const [items, setItems] = useState<ChartItem[]>(templates.classA);
-  const [opportunities, setOpportunities] = useState<string>('');
-  const [threats, setThreats] = useState<string>('');
-  const [aiAdvice, setAiAdvice] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [selectedBorder, setSelectedBorder] = useState<BorderType>('A');
+  // --- 状態管理 (State) ---
+  const { isAdmin } = useAuth();
+  const [datasets, setDatasets] = useState<UserDataset[]>(userMasterData);
+  const [currentUserId, setCurrentUserId] = useState<string>(userMasterData[0]?.userId || '');
   const [activeTab, setActiveTab] = useState(0);
 
-  const chartableItems = useMemo(() =>
-    items.filter(item => item.value != null && item.value > 0),
-    [items]
+  const currentUser = useMemo(() =>
+    datasets.find(d => d.userId === currentUserId),
+    [datasets, currentUserId]
   );
 
   // --- 派生状態 ---
-  const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
-
-  const handleLoadTemplate = (templateType: 'classA' | 'classB') => {
-    // テンプレートのデータをディープコピーして、IDを現在時刻でユニークにする
-    const newItems = templates[templateType].map(item => ({
-      ...item,
-      id: Date.now() + Math.random() // ユニークIDを生成
-    }));
-    setItems(newItems);
-  };
-
-  const strengths = useMemo(() =>
-    chartableItems.filter(item => (item.value / item.maxValue) >= currentBorderPercentage),
-    [chartableItems, currentBorderPercentage] // 依存配列を更新
-  );
-  const weaknesses = useMemo(() =>
-    chartableItems.filter(item => (item.value / item.maxValue) < currentBorderPercentage),
-    [chartableItems, currentBorderPercentage] // 依存配列を更新
+  const currentItems = useMemo(() =>
+    datasets.find(d => d.userId === currentUserId)?.items || [],
+    [datasets, currentUserId]
   );
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
+  // --- ハンドラ群 ---
+    const handleUserChange = (newUserId: string) => {
+    setCurrentUserId(newUserId);
   };
 
-  // --- イベントハンドラ ---
-  const handleItemChange = (id: number, field: 'label' | 'value', val: string | number) => {
-    setItems(prev => prev.map(item => (item.id === id ? { ...item, [field]: val } : item)));
+  const handleAddNewUser = (userName: string) => {
+    const newUserId = `user-${Date.now()}`;
+    const newUser: UserDataset = {
+      userId: newUserId,
+      userName: userName || `新規ユーザー ${datasets.length + 1}`,
+      items: [],
+    };
+    setDatasets(prev => [...prev, newUser]);
+    setCurrentUserId(newUserId);
   };
-  // ★ 変更点: 新規項目にもmaxValueを設定
-  const addItem = () => setItems([...items, { id: Date.now(), label: `新規項目`, value: 50, maxValue: 100 }]);
-  const removeItem = (id: number) => setItems(items.filter(item => item.id !== id));
 
-  const handleAnalyze = async () => {
-    setIsLoading(true);
-    setAiAdvice('');
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          borderType: selectedBorder, // 'A' or 'B'
-          strengths: strengths.map(item => item.label),
-          weaknesses: weaknesses.map(item => item.label),
-          opportunities,
-          threats,
-        }),
-      });
-      if (!response.ok) throw new Error('API request failed');
-      const data = await response.json();
-      setAiAdvice(data.advice);
-    } catch (error) {
-      console.error('AI分析のAPI呼び出しに失敗:', error);
-      setAiAdvice('分析に失敗しました。時間をおいて再度お試しください。');
-    } finally {
-      setIsLoading(false);
+  const handleDeleteUser = (userIdToDelete: string) => {
+    const remainingDatasets = datasets.filter(d => d.userId !== userIdToDelete);
+    if (remainingDatasets.length > 0) {
+      setDatasets(remainingDatasets);
+      if (currentUserId === userIdToDelete) {
+        setCurrentUserId(remainingDatasets[0].userId);
+      }
+    } else {
+      // 全てのデータが削除された場合、新しい空のデータセットを作成する
+      const newUserId = `user-${Date.now()}`;
+      const newEmptyUser: UserDataset = {
+        userId: newUserId,
+        userName: '新しいデータ', // デフォルト名
+        items: [], // 空の項目リスト
+        // swot や confidential も必要に応じて初期化
+        swot: { opportunities: '', threats: '' },
+        confidential: { disabilityType: [], characteristics: [], considerations: '' },
+      };
+      setDatasets([newEmptyUser]);
+      setCurrentUserId(newEmptyUser.userId);
     }
+  };
+
+  const handleItemChange = (itemId: number, field: 'label' | 'value', value: string | number) => {
+    setDatasets(prev => prev.map(d => d.userId === currentUserId ? { ...d, items: d.items.map(item => item.id === itemId ? { ...item, [field]: value } : item) } : d));
+  };
+
+  const handleAddItem = () => {
+    setDatasets(prev =>
+      prev.map(d =>
+        d.userId === currentUserId
+          ? { ...d, items: [...d.items, { id: Date.now(), label: '新規項目', value: 0, maxValue: 100 }] }
+          : d
+      )
+    );
+  };
+
+  const handleRemoveItem = (itemId: number) => {
+    setDatasets(prev =>
+      prev.map(d =>
+        d.userId === currentUserId
+          ? { ...d, items: d.items.filter(item => item.id !== itemId) }
+          : d
+      )
+    );
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    const selectedTemplate = templates.find(t => t.templateId === templateId);
+    if (!selectedTemplate) return;
+
+    const newUserId = `user-${Date.now()}`;
+    const newUserDataset: UserDataset = {
+      userId: newUserId,
+      // ★ 新しいユーザーの名前を「(テンプレート名)のコピー」のようにする
+      userName: `${selectedTemplate.templateName} `,
+      // テンプレートの項目をコピーしつつ、各項目に新しいユニークIDを付与
+      items: selectedTemplate.items.map(item => ({
+        ...item,
+        id: Date.now() + Math.random(),
+      })),
+      // swotやconfidentialは空の状態で初期化
+      swot: { opportunities: '', threats: '' },
+      confidential: { disabilityType: [], characteristics: [], considerations: '' },
+    };
+
+    setDatasets(prev => [...prev, newUserDataset]);
+    setCurrentUserId(newUserId);
+  };
+
+  // handleTabChange は onTabChange としてSidebarに渡す
+  const handleTabChange = (index: number) => {
+    setActiveTab(index);
+  };
+
+  const handleUserPropertyChange = (property: 'userName' | 'considerations', value: string) => {
+    setDatasets(prev =>
+      prev.map(d => {
+        if (d.userId === currentUserId) {
+          if (property === 'userName') {
+            return { ...d, userName: value };
+          }
+          if (property === 'considerations') {
+            return { ...d, confidential: { ...d.confidential, considerations: value } };
+          }
+        }
+        return d;
+      })
+    );
+  };
+
+  const handleSwotChange = (field: 'opportunities' | 'threats', value: string) => {
+    setDatasets(prev =>
+      prev.map(d => {
+        // 現在のユーザーのデータセットであるかを判定
+        if (d.userId === currentUserId) {
+          // 正しい構文で、swotオブジェクトを更新して新しいデータセットを返す
+          return {
+            ...d,
+            swot: {
+              ...d.swot, // 既存のswotの値を維持
+              [field]: value, // 指定されたフィールド（opportunities または threats）を新しい値で更新
+            },
+          };
+        }
+        // 他のユーザーのデータセットはそのまま返す
+        return d;
+      })
+    );
+  };
+
+  const handleConsiderationsChange = (userId: string, value: string) => {
+    setDatasets(prev => prev.map(d => d.userId === userId ? { ...d, confidential: { ...d.confidential, considerations: value } } : d));
+  };
+
+  const handleDisabilityTypeChange = (userId: string, value: string[]) => {
+    setDatasets(prev => prev.map(d => d.userId === userId ? { ...d, confidential: { ...d.confidential, disabilityType: value } } : d));
+  };
+
+  const handleCharacteristicsChange = (userId: string, value: string[]) => {
+    setDatasets(prev => prev.map(d => d.userId === userId ? { ...d, confidential: { ...d.confidential, characteristics: value } } : d));
   };
 
   // --- レンダリング ---
   return (
     <main className={styles.mainContainer}>
-      <header className={styles.header}>
-        <h1>レーダーチャート SWOT分析 & アドバイス</h1>
-      </header>
+      {/* <header className={styles.header}>
+        <h1>レーダーチャート SWOT分析 & AIアドバイス</h1>
+      </header> */}
 
-      <Box sx={{ width: '100%' }}>
-        {/* 1. タブの切り替え部分 */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="main tabs" centered>
-            <Tab label="設定" id="main-tab-0" />
-            <Tab label="分析結果" id="main-tab-1" />
-          </Tabs>
-        </Box>
+      <Sidebar
+        drawerWidth={drawerWidth}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
-        {/* 2. 「設定」タブのコンテンツ */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          bgcolor: 'background.default',
+          p: 3,
+          // サイドバーの幅と同じだけ左にマージンを設定し、
+          // コンテンツの開始位置を右にずらす
+          marginLeft: `${drawerWidth}px`,
+        }}
+      >
         <TabPanel value={activeTab} index={0}>
           <SettingsPanel
-            items={items}
-            onItemChange={handleItemChange}
-            onAddItem={addItem}
-            onRemoveItem={removeItem}
-            onLoadTemplate={handleLoadTemplate}
-          />
+          datasets={datasets}
+          currentUserId={currentUserId}
+          onUserChange={handleUserChange}
+          onAddNewUser={handleAddNewUser}
+          onDeleteUser={handleDeleteUser}
+          items={currentItems}
+          onItemChange={handleItemChange}
+          onAddItem={handleAddItem}
+          onRemoveItem={handleRemoveItem}
+          onLoadTemplate={handleLoadTemplate}
+          templates={templates}
+          onUserPropertyChange={handleUserPropertyChange}
+        />
         </TabPanel>
-
-        {/* 3. 「分析結果」タブのコンテンツ */}
         <TabPanel value={activeTab} index={1}>
           <AnalysisPanel
-            items={chartableItems}
-            strengths={strengths}
-            weaknesses={weaknesses}
-            borderPercentage={currentBorderPercentage}
-            borderType={selectedBorder}
-            opportunities={opportunities}
-            threats={threats}
-            aiAdvice={aiAdvice}
-            isLoading={isLoading}
-            onOpportunitiesChange={setOpportunities}
-            onThreatsChange={setThreats}
-            onAnalyze={handleAnalyze}
-            onBorderChange={setSelectedBorder}
+            dataset={currentUser || null}
+            onSwotChange={handleSwotChange}
           />
         </TabPanel>
+        {isAdmin && (
+          <TabPanel value={activeTab} index={2}>
+            <ConfidentialPanel
+              datasets={datasets}
+              currentGlobalUserId={currentUserId}
+              onConsiderationsChange={handleConsiderationsChange}
+              onDisabilityTypeChange={handleDisabilityTypeChange}
+              onCharacteristicsChange={handleCharacteristicsChange}
+            />
+          </TabPanel>
+        )}
       </Box>
     </main>
   );

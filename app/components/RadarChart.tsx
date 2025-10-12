@@ -65,7 +65,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ labels, values, borderLines }) 
         max: 100,
         // 目盛りの設定 (UX向上のためのオプション)
         ticks: {
-          stepSize: 20, // 20%ごとに目盛りを表示
+          stepSize: 10, // 20%ごとに目盛りを表示
           // 目盛りの数値に '%' をつける
           callback: function (value: string | number) {
             return value + '%';

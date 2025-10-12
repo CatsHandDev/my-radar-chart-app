@@ -1,34 +1,35 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateCounselingPrompt } from '../../prompts/counselingPrompt';
 
-// 環境変数からAPIキーを読み込む
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// ★ 1. APIキーがそもそも存在するかチェック
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY is not defined in .env.local");
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(request: Request) {
+  // ★ 2. tryブロックを細分化して、どこでエラーが起きるか分かりやすくする
   try {
-    const { borderType, strengths, weaknesses, opportunities, threats } = await request.json();
+    const body = await request.json();
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const promptData = {
+      borderType: body.borderType,
+      strengths: body.strengths,
+      weaknesses: body.weaknesses,
+      opportunities: body.opportunities,
+      threats: body.threats,
+      confidential: {
+        disabilityType: body.confidential?.disabilityType || '情報なし',
+        characteristics: body.confidential?.characteristics || [],
+        considerations: body.confidential?.considerations || '特になし',
+      }
+    };
 
-    const prompt = `
-      以下の分析結果について、プロフェッショナルな視点から具体的な改善策や戦略を3つ提案してください。
-      この分析は「${borderType}ランク基準 (${borderType === 'A' ? '66%' : '33%'})」という基準値に基づいて行われています。
+    // 2. 外部化した関数を呼び出して、プロンプトを生成する
+    const prompt = generateCounselingPrompt(promptData);
 
-      # 強み (Strengths)
-      ${strengths.length > 0 ? strengths.join(', ') : '特になし'}
-
-      # 弱み (Weaknesses)
-      ${weaknesses.length > 0 ? weaknesses.join(', ') : '特になし'}
-
-      # 機会 (Opportunities)
-      ${opportunities || '特になし'}
-
-      # 脅威 (Threats)
-      ${threats || '特になし'}
-
-      # アドバイス:
-    `;
-
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
     const response = result.response;
     const text = response.text();
@@ -36,7 +37,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ advice: text });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'AIによる分析中にエラーが発生しました。' }, { status: 500 });
+    // ★ 4. エラーの詳細をサーバーのコンソールに出力
+    console.error("Error in /api/analyze:", error);
+
+    // エラーメッセージをフロントエンドに返す
+    return NextResponse.json(
+      { error: 'AIによる分析中にサーバーでエラーが発生しました。' },
+      { status: 500 }
+    );
   }
 }
