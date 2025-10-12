@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Box, TextField, Button, Typography, Card } from '@mui/material';
 
 // ★ 実際のパスワードは環境変数で管理するのがベスト
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'your-default-password';
+const ADMIN_PASSWORD = process.env.ADMIN_MODE || 'your-default-password';
 
 const LoginPage = () => {
   const [password, setPassword] = useState('');
