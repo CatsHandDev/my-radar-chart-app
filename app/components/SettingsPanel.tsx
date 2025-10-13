@@ -100,12 +100,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             />
 
             {/* 最大値表示: 固定幅 */}
-            {/* <Typography
+            <Typography
               variant="body2"
               sx={{ color: 'text.secondary', minWidth: '80px', textAlign: 'left' }}
             >
-              (最大: {item.maxValue})
-            </Typography> */}
+              (基準値: {item.maxValue})
+            </Typography>
 
             {/* 削除ボタン */}
             <Button

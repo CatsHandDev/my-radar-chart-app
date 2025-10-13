@@ -27,8 +27,8 @@ export const userMasterData: UserDataset[] = [
     userName: '四宮 直樹',
     items: [
       { id: Date.now() + 1, label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: Date.now() + 2, label: 'ピッキング', value: 0, maxValue: 300 },
-      { id: Date.now() + 3, label: '箱出し', value: 0, maxValue: 300 },
+      { id: Date.now() + 2, label: 'ピッキング', value: 0, maxValue: 400 },
+      { id: Date.now() + 3, label: '箱出し', value: 0, maxValue: 400 },
     ],
     swot: {
       opportunities: '',
