@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { UserDataset } from './types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { UserDataset, WorkLog, ChartItem } from './types';
 import SettingsPanel from './components/SettingsPanel';
 import AnalysisPanel from './components/AnalysisPanel';
 import TabPanel from './components/TabPanel';
@@ -12,6 +12,9 @@ import { Box } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import ConfidentialPanel from './components/ConfidentialPanel';
 import { useAuth } from './hooks/useAuth';
+import { db, userConverter, itemConverter } from './lib/firebase';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 const drawerWidth = 240;
 
@@ -21,6 +24,33 @@ export default function Home() {
   const [datasets, setDatasets] = useState<UserDataset[]>(userMasterData);
   const [currentUserId, setCurrentUserId] = useState<string>(userMasterData[0]?.userId || '');
   const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      // ★ 1. userConverter を適用
+      const usersCollectionRef = collection(db, "users").withConverter(userConverter);
+      const querySnapshot = await getDocs(usersCollectionRef);
+      
+      // ★ 2. .data() を呼ぶだけで、型付けされた UserDataset[] が手に入る
+      const usersData = querySnapshot.docs.map(doc => doc.data());
+
+      // ★ 3. for...of ループで各ユーザーのサブコレクションを取得
+      for (const user of usersData) {
+        // ★ 4. itemConverter を適用
+        const itemsCollectionRef = collection(db, "users", user.userId, "radar_items").withConverter(itemConverter);
+        const itemsSnapshot = await getDocs(itemsCollectionRef);
+        
+        // ★ 5. .data() を呼ぶだけで、型付けされた ChartItem[] が手に入る
+        user.items = itemsSnapshot.docs.map(doc => doc.data());
+      }
+      
+      setDatasets(usersData);
+      if (usersData.length > 0) {
+        setCurrentUserId(usersData[0].userId);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const currentUser = useMemo(() =>
     datasets.find(d => d.userId === currentUserId),
@@ -72,7 +102,7 @@ export default function Home() {
     }
   };
 
-  const handleItemChange = (itemId: number, field: 'label' | 'value', value: string | number) => {
+  const handleItemChange = (itemId: string, field: 'label' | 'value', value: string | number) => {
     setDatasets(prev => prev.map(d => d.userId === currentUserId ? { ...d, items: d.items.map(item => item.id === itemId ? { ...item, [field]: value } : item) } : d));
   };
 
@@ -80,13 +110,18 @@ export default function Home() {
     setDatasets(prev =>
       prev.map(d =>
         d.userId === currentUserId
-          ? { ...d, items: [...d.items, { id: Date.now(), label: '新規項目', value: 0, maxValue: 100 }] }
+          ? { ...d, items: [...d.items, {
+              id: uuidv4(), // ★ Date.now() -> uuidv4() に変更
+              label: '新規項目',
+              value: 0,
+              maxValue: 100
+            }] }
           : d
       )
     );
   };
 
-  const handleRemoveItem = (itemId: number) => {
+  const handleRemoveItem = (itemId: string) => {
     setDatasets(prev =>
       prev.map(d =>
         d.userId === currentUserId
@@ -95,6 +130,7 @@ export default function Home() {
       )
     );
   };
+
 
   const handleLoadTemplate = (templateId: string) => {
     const selectedTemplate = templates.find(t => t.templateId === templateId);
@@ -108,7 +144,7 @@ export default function Home() {
       // テンプレートの項目をコピーしつつ、各項目に新しいユニークIDを付与
       items: selectedTemplate.items.map(item => ({
         ...item,
-        id: Date.now() + Math.random(),
+        id: uuidv4(),
       })),
       // swotやconfidentialは空の状態で初期化
       swot: { opportunities: '', threats: '' },
@@ -171,6 +207,22 @@ export default function Home() {
   const handleCharacteristicsChange = (userId: string, value: string[]) => {
     setDatasets(prev => prev.map(d => d.userId === userId ? { ...d, confidential: { ...d.confidential, characteristics: value } } : d));
   };
+
+  const handleRecordLog = async (logData: WorkLog) => {
+    if (!currentUserId) return;
+
+    try {
+      const logsCollectionRef = collection(db, "users", currentUserId, "work_logs");
+      await addDoc(logsCollectionRef, {
+        ...logData,
+        createdAt: serverTimestamp(),
+      });
+      alert("記録を保存しました。");
+    } catch (error) {
+      console.error("記録の保存に失敗:", error);
+    }
+  };
+
 
   // --- レンダリング ---
   return (

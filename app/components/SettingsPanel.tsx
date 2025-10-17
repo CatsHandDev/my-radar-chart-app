@@ -10,9 +10,9 @@ interface SettingsPanelProps {
   onAddNewUser: (userName: string) => void;
   onDeleteUser: (userIdToDelete: string) => void;
   items: ChartItem[];
-  onItemChange: (id: number, field: 'label' | 'value', value: string | number) => void;
+  onItemChange: (id: string, field: 'label' | 'value', value: string | number) => void;
   onAddItem: () => void;
-  onRemoveItem: (id: number) => void;
+  onRemoveItem: (id: string) => void;
   onLoadTemplate: (templateId: string) => void;
   templates: Template[];
   onUserPropertyChange: (property: 'userName', value: string) => void;
@@ -24,21 +24,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
 
   // ★ 1. onFocusイベントハンドラ: フォーカスが当たった時に値が0なら空文字にする
-  const handleValueFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: number) => {
+  const handleValueFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
     if (Number(e.target.value) === 0) {
       onItemChange(id, 'value', ''); // 空文字を渡して表示をクリア
     }
   };
 
   // ★ 2. onBlurイベントハンドラ: フォーカスが外れた時に値が空なら0に戻す
-  const handleValueBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: number) => {
+  const handleValueBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
     if (e.target.value === '') {
       onItemChange(id, 'value', 0); // 0を渡して表示を戻す
     }
   };
 
   // ★ 3. onChangeイベントハンドラ: 入力値を数値に変換する
-  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id: number) => {
+  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
     // 入力値を数値に変換。空文字や数値以外の場合は0とする
     const numericValue = Number(e.target.value) || 0;
     onItemChange(id, 'value', numericValue);

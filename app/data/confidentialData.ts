@@ -1,4 +1,5 @@
 import { UserDataset } from "../types";
+import { v4 as uuidv4 } from 'uuid';
 
 export const userMasterData: UserDataset[] = [
   // --- Aさん (user-1) の完全なデータ ---
@@ -6,9 +7,9 @@ export const userMasterData: UserDataset[] = [
     userId: 'user-1',
     userName: '大村 可南子',
     items: [
-      { id: Date.now() + 1, label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: Date.now() + 2, label: 'ピッキング', value: 0, maxValue: 400 },
-      { id: Date.now() + 3, label: '箱出し', value: 0, maxValue: 400 },
+      { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
+      { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },
+      { id: uuidv4(), label: '箱出し', value: 0, maxValue: 400 },
     ],
     swot: {
       opportunities: '',
@@ -26,9 +27,9 @@ export const userMasterData: UserDataset[] = [
     userId: 'user-2',
     userName: '四宮 直樹',
     items: [
-      { id: Date.now() + 1, label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: Date.now() + 2, label: 'ピッキング', value: 0, maxValue: 400 },
-      { id: Date.now() + 3, label: '箱出し', value: 0, maxValue: 400 },
+      { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
+      { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },
+      { id: uuidv4(), label: '箱出し', value: 0, maxValue: 400 },
     ],
     swot: {
       opportunities: '',

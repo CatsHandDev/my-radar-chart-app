@@ -1,5 +1,5 @@
 export interface ChartItem {
-  id: number;
+  id: string;
   label: string;
   value: number;
   maxValue: number;
@@ -28,4 +28,13 @@ export interface Template {
   templateId: string;
   templateName: string;
   items: ChartItem[];
+}
+
+// 作業記録一件を表す型
+export interface WorkLog {
+  itemId: string;
+  quantity: number;
+  startTime: Date;
+  endTime: Date;
+  breakDuration: number;
 }
