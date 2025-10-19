@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Typography, Tabs, Tab, ToggleButtonGroup, ToggleButton, Button } from '@mui/material';
 import { BorderType, UserDataset } from '../types';
 import RadarChart from './RadarChart';
 import SwotMatrix from './SwotMatrix';
 import TabPanel from './TabPanel';
 import styles from './AnalysisPanel.module.scss'
-import { db } from '../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export const BORDER_PERCENTAGES: Record<BorderType, number> = { A: 0.65, B: 0.45 };
 
@@ -23,23 +21,12 @@ interface AnalysisPanelProps {
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ dataset, onSwotChange }) => {
   // --- このコンポーネントが管理するState ---
   const [selectedBorder, setSelectedBorder] = useState<BorderType>('A');
-  const [, setOpportunities] = useState<string>('');
-  const [, setThreats] = useState<string>('');
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState(0);
 
   // 1. datasetからitemsを安全に取り出す
   const items = useMemo(() => dataset?.items || [], [dataset]);
-
-  // 2. datasetが切り替わったら（＝新しいユーザーが選択されたら）、分析結果をリセットする
-  useEffect(() => {
-    setOpportunities(dataset?.swot?.opportunities || '');
-    setThreats(dataset?.swot?.threats || '');
-    setAiAdvice('');
-    // 基準もデフォルトのAに戻す
-    setSelectedBorder('A');
-  }, [dataset]);
 
   // --- 派生状態 ---
   const chartableItems = useMemo(() => items.filter(item => item.value > 0), [items]);
@@ -84,24 +71,6 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ dataset, onSwotChange }) 
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleApplyDateRange = async () => {
-    // 1. dataset が null の可能性があるため、早期リターンでチェック
-    if (!dataset) return;
-
-    // 2. dateRange という state が未定義だった
-    const [dateRange, setDateRange] = useState([null, null]);
-
-    const logsCollectionRef = collection(db, "users", dataset.userId, "work_logs");
-    const q = query(logsCollectionRef,
-      where("startTime", ">=", dateRange[0]),
-      where("startTime", "<=", dateRange[1])
-    );
-    const querySnapshot = await getDocs(q);
-    const logs = querySnapshot.docs.map(doc => doc.data());
-
-    // ... 
   };
 
   // --- レンダリング用のデータ準備 ---

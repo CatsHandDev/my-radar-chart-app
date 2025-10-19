@@ -1,8 +1,9 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, FirestoreDataConverter, DocumentData, QueryDocumentSnapshot, SnapshotOptions } from "firebase/firestore";
-import { UserDataset, ChartItem } from '../types';
+import { FirestoreDataConverter, DocumentData, QueryDocumentSnapshot, SnapshotOptions, getFirestore, WithFieldValue } from 'firebase/firestore';
+import { ChartItem, UserDataset, WorkLog } from '../types';
 
 // Firebaseプロジェクトの設定情報
+// .env.local ファイルから読み込まれます
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,26 +13,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// アプリが既に初期化されていないかチェック
+// アプリが既に初期化されていないかチェックして、初期化または既存のインスタンスを取得
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
-
-// Firestoreのインスタンスを取得
 const db = getFirestore(app);
 
-export { db };
+// --- Firestoreデータコンバーター ---
 
-// 1. UserDataset 用のコンバーター
 export const userConverter: FirestoreDataConverter<UserDataset> = {
-  // UserDataset -> Firestoreドキュメント への変換
   toFirestore: (user: UserDataset): DocumentData => {
-    // items はサブコレクションで管理するため、ここでは含めない
     return {
       userName: user.userName,
       confidential: user.confidential,
       swot: user.swot,
     };
   },
-  // Firestoreドキュメント -> UserDataset への変換
   fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): UserDataset => {
     const data = snapshot.data(options);
     return {
@@ -39,29 +34,55 @@ export const userConverter: FirestoreDataConverter<UserDataset> = {
       userName: data.userName,
       confidential: data.confidential,
       swot: data.swot,
-      items: [], // items は後でサブコレクションから取得する
+      items: [],
     };
+  }
+};
+
+// UserDataset 用のコンバーター
+export const workLogConverter: FirestoreDataConverter<WorkLog> = {
+  // fromFirestoreは変更なし
+  fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): WorkLog => {
+    const data = snapshot.data(options);
+    return {
+      id: snapshot.id,
+      userId: data.userId,
+      itemId: data.itemId,
+      quantity: data.quantity,
+      startTime: data.startTime.toDate(),
+      endTime: data.endTime.toDate(),
+      breakDuration: data.breakDuration,
+      workMinutes: data.workMinutes,
+      createdAt: data.createdAt.toDate(),
+    };
+  },
+  toFirestore: function (): WithFieldValue<DocumentData> {
+    throw new Error("Function not implemented.");
   }
 };
 
 // 2. ChartItem 用のコンバーター
 export const itemConverter: FirestoreDataConverter<ChartItem> = {
+  // ChartItem オブジェクトを Firestore ドキュメントに変換する
   toFirestore: (item: ChartItem): DocumentData => {
-    // id はドキュメントIDとして使うので、ここでは含めない
+    // id はドキュメントIDとして扱うため、フィールドには含めない
     return {
       label: item.label,
       value: item.value,
       maxValue: item.maxValue,
     };
   },
+  // Firestore ドキュメントを ChartItem オブジェクトに変換する
   fromFirestore: (snapshot: QueryDocumentSnapshot, options: SnapshotOptions): ChartItem => {
     const data = snapshot.data(options);
     return {
-      id: snapshot.id, // ドキュメントIDをidとして使う
+      id: snapshot.id, // ドキュメントIDをオブジェクトのidとして使用
       label: data.label,
-      value: data.value,
+      value: data.value || 0, // valueが存在しない場合は0をデフォルト値とする
       maxValue: data.maxValue,
     };
   }
 };
 
+// Firestoreインスタンスをエクスポート
+export { db };
