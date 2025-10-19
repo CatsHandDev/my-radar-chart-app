@@ -32,9 +32,15 @@ export interface Template {
 
 // 作業記録一件を表す型
 export interface WorkLog {
+  id: string; // FirestoreのドキュメントID
+  userId: string;
   itemId: string;
   quantity: number;
   startTime: Date;
   endTime: Date;
   breakDuration: number;
+  workMinutes: number;
+  createdAt: Date;
 }
+
+export type NewWorkLog = Omit<WorkLog, 'id' | 'createdAt'>;
