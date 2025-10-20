@@ -8,6 +8,7 @@ export interface ChartItem {
 export interface UserDataset {
   userId: string;
   userName: string;
+  password_plain?: string;
   items: ChartItem[];
 // ★ 1. SWOT分析 (利用者本人が入力する部分)
   swot?: {

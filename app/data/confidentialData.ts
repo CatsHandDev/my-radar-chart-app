@@ -6,6 +6,7 @@ export const userMasterData: UserDataset[] = [
   {
     userId: 'user-1',
     userName: '大村 可南子',
+    password_plain: 'pass1234',
     items: [
       { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
       { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },
@@ -26,6 +27,7 @@ export const userMasterData: UserDataset[] = [
   {
     userId: 'user-2',
     userName: '四宮 直樹',
+    password_plain: 'pass5678',
     items: [
       { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
       { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },

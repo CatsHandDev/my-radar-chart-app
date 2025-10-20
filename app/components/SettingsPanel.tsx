@@ -86,7 +86,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       {dataset && (
         <>
           <Typography variant="h6" gutterBottom>
-            「{dataset.userName}」さんの項目
+            {dataset.userId === 'guest' ? 'ワンタイム分析' : `「${dataset.userName}」さんの項目`}
           </Typography>
           {items.map(item => (
             <Box

@@ -9,7 +9,7 @@ import { UserDataset, ChartItem, NewWorkLog } from './types';
 
 // --- Firebase & データ ---
 import { db, userConverter, itemConverter } from './lib/firebase';
-import { doc, collection, setDoc, addDoc, deleteDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { doc, collection, setDoc, addDoc, deleteDoc, Timestamp, serverTimestamp, getDocs } from "firebase/firestore";
 
 // --- コンポーネント ---
 import SettingsPanel from './components/SettingsPanel';
@@ -18,17 +18,35 @@ import TabPanel from './components/TabPanel';
 import Sidebar from './components/Sidebar';
 import ConfidentialPanel from './components/ConfidentialPanel';
 import WorkLogPanel from './components/WorkLogPanel';
+import { v4 as uuidv4 } from 'uuid';
+
 
 // --- スタイル ---
 import styles from './page.module.scss';
 
 const drawerWidth = 240;
 
+// ゲストユーザー用の空のデータ構造を定義
+const createGuestDataset = (): UserDataset => ({
+  userId: 'guest',
+  userName: 'ゲスト',
+  items: [
+    // 最初からいくつかの項目を入れておくと親切
+    { id: uuidv4(), label: '項目1', value: 0, maxValue: 100 },
+    { id: uuidv4(), label: '項目2', value: 0, maxValue: 100 },
+    { id: uuidv4(), label: '項目3', value: 0, maxValue: 100 },
+  ],
+  swot: { opportunities: '', threats: '' },
+  confidential: {}, // ゲストは機密情報を持たない
+});
+
 export default function Home() {
   // --- 状態管理 (State) ---
-  const [dataset, setDataset] = useState<UserDataset | null>(null);
+  const [dataset, setDataset] = useState<UserDataset>(createGuestDataset());
   const [activeTab, setActiveTab] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [allUsers, setAllUsers] = useState<UserDataset[]>([]);
 
   useEffect(() => {
     // ページが読み込まれた後に一度だけセッションストレージを確認
@@ -38,75 +56,103 @@ export default function Home() {
     }
   }, []);
 
-  // 1. データベースから取得したと仮定する、全ユーザーのリストをstateとして管理
-  //    (将来的には useEffect 内の fetchUsers で更新される)
-  const [allUsers, setAllUsers] = useState<UserDataset[]>([]);
-
   useEffect(() => {
     // データを非同期で取得するロジック（現在はローカルから）
     setAllUsers(userMasterData);
   }, []);
 
   // 2. handleFetchData を、パスワードも検証するように修正
-  const handleFetchData = (userId: string, password?: string) => {
-    const userData = allUsers.find(user => user.userId === userId);
-
-    if (userData) {
-      // ここでパスワードを検証する（将来的にはバックエンドで）
-      // 今回は仮として、全てのユーザーのパスワードを 'password' とする
-      if (password === 'password') {
-        setDataset(userData);
-        // 管理者判定（userIdが'admin'なら、など）
-        setIsAdmin(userId === 'admin-01');
-      } else {
-        alert('パスワードが違います。');
-      }
-    } else {
-      alert('ユーザーが見つかりません');
+  const handleFetchData = async (userId: string, password?: string) => {
+    if (!userId || !password) {
+      alert('ユーザーIDとパスワードを選択・入力してください。');
+      return;
     }
+    setIsLoading(true);
+    setIsAdmin(false);
+
+    try {
+      // ★ 認証APIを呼び出す
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ログインに失敗しました');
+      }
+
+      // 認証成功
+      const userData = data.user;
+      
+      // ★ サブコレクションのitemsを取得する処理は維持
+      const itemsCollectionRef = collection(db, 'users', userId, 'radar_items').withConverter(itemConverter);
+      const itemsSnapshot = await getDocs(itemsCollectionRef);
+      userData.items = itemsSnapshot.docs.map(doc => doc.data());
+      
+      setDataset(userData);
+      // ★ 役割(role)で管理者判定
+      setIsAdmin(userData.confidential?.role === 'admin');
+      
+    } catch (error) {
+      console.error("Login failed:", error);
+      
+      let errorMessage = 'ログイン処理中に予期しないエラーが発生しました。';
+      if (error instanceof Error) {
+        errorMessage = error.message; // APIからのメッセージ ("ユーザーIDまたはパスワードが違います。") を使う
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ログアウト機能を追加
+  const handleLogout = () => {
+    setDataset(createGuestDataset());
+    setIsAdmin(false);
+    // sessionStorage もクリア
+    sessionStorage.removeItem('isAdmin');
   };
 
   // --- データ更新 (Update) ---
   const updateDatasetInStateAndDb = async (updatedDataset: UserDataset) => {
-    setDataset(updatedDataset); // まずUIを即時更新
-    const { ...userData } = updatedDataset;
-    const userDocRef = doc(db, 'users', updatedDataset.userId).withConverter(userConverter);
-    await setDoc(userDocRef, userData, { merge: true }); // merge: trueでフィールドを上書き
+    setDataset(updatedDataset); // UIは即時更新
+
+    // ログインしているユーザーの場合のみ、DBに書き込む
+    if (updatedDataset.userId !== 'guest') {
+      const { items, ...userData } = updatedDataset;
+      const userDocRef = doc(db, 'users', updatedDataset.userId).withConverter(userConverter);
+      await setDoc(userDocRef, userData, { merge: true });
+    }
   };
 
   const handleItemChange = (itemId: string, field: 'label' | 'value', value: string | number) => {
-    if (!dataset) return;
-    const newItems = dataset.items.map(item => item.id === itemId ? { ...item, [field]: value } : item);
-    updateDatasetInStateAndDb({ ...dataset, items: newItems });
-    // Firestoreのサブコレクションも更新
-    const itemDocRef = doc(db, 'users', dataset.userId, 'radar_items', itemId);
-    setDoc(itemDocRef, { [field]: value }, { merge: true });
+    // datasetがnullになることはないので、 if (!dataset) return; は不要
+    setDataset(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === itemId ? { ...item, [field]: value } : item)
+    }));
   };
 
   const handleSwotChange = (field: 'opportunities' | 'threats', value: string) => {
-    if (!dataset) return;
-    const newSwot = { ...dataset.swot, [field]: value };
-    updateDatasetInStateAndDb({ ...dataset, swot: newSwot });
+    setDataset(prev => ({
+      ...prev,
+      swot: { ...prev.swot, [field]: value }
+    }));
   };
 
   const handleUserPropertyChange = (
     property: 'userName' | 'disabilityType' | 'characteristics' | 'considerations',
     value: string | string[]
   ) => {
-    if (!dataset) return;
-
-    // setDataset を使って、単一の dataset state を更新する
     setDataset(prev => {
-      if (!prev) return null;
-
-      // 新しいデータセットのコピーを作成
       const newDataset = { ...prev };
-
-      // 更新対象のプロパティに応じて、適切な場所の値を更新
       if (property === 'userName') {
         newDataset.userName = value as string;
       } else {
-        // confidential オブジェクトが存在しない場合も考慮
         const confidential = newDataset.confidential || {};
         newDataset.confidential = { ...confidential, [property]: value };
       }
@@ -115,12 +161,17 @@ export default function Home() {
   };
 
   // --- データ作成 (Create) ---
-  const handleAddItem = async () => {
-    if (!dataset) return;
-    const newItem: Omit<ChartItem, 'id'> = { label: '新規項目', value: 0, maxValue: 100 };
-    const itemsCollectionRef = collection(db, 'users', dataset.userId, 'radar_items').withConverter(itemConverter);
-    const newDocRef = await addDoc(itemsCollectionRef, newItem);
-    setDataset(prev => prev ? { ...prev, items: [...prev.items, { id: newDocRef.id, ...newItem }] } : null);
+  const handleAddItem = () => {
+    const newItem: ChartItem = {
+      id: uuidv4(),
+      label: '新規項目',
+      value: 0,
+      maxValue: 100
+    };
+    setDataset(prev => ({
+      ...prev,
+      items: [...prev.items, newItem]
+    }));
   };
 
   const handleRecordLog = async (logData: Omit<NewWorkLog, 'userId'>) => {
@@ -153,11 +204,11 @@ export default function Home() {
   };
 
   // --- データ削除 (Delete) ---
-  const handleRemoveItem = async (itemId: string) => {
-    if (!dataset) return;
-    setDataset(prev => prev ? { ...prev, items: prev.items.filter(item => item.id !== itemId) } : null);
-    const itemDocRef = doc(db, 'users', dataset.userId, 'radar_items', itemId);
-    await deleteDoc(itemDocRef);
+  const handleRemoveItem = (itemId: string) => {
+    setDataset(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== itemId)
+    }));
   };
 
   // --- ナビゲーション ---
@@ -172,6 +223,8 @@ export default function Home() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         isAdmin={isAdmin}
+        onLogout={handleLogout}
+        isLoggedIn={dataset.userId !== 'guest'}
       />
       <Box component="main" sx={{ flexGrow: 1, p: 3, marginLeft: `${drawerWidth}px` }}>
         <TabPanel value={activeTab} index={0}>

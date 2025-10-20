@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
+import bcrypt from 'bcryptjs';
 
 // ★ ローカルのデータファイルをインポート
 import { userMasterData } from '../../data/confidentialData';
@@ -18,13 +19,17 @@ export async function POST() {
       // users コレクションへの参照を作成
       const userRef = doc(db, 'users', user.userId);
 
+      // ★ 1. パスワードをハッシュ化
+      const salt = await bcrypt.genSalt(10); // ソルトを生成
+      const passwordHash = await bcrypt.hash(user.password_plain, salt);
+
+      // ★ 2. 書き込むデータに userName と passwordHash を含める
       const userDataToWrite = {
         userName: user.userName,
-        // password: await hashPassword(user.password), // 将来的にこのようにハッシュ化
+        passwordHash: passwordHash, // ★ ハッシュ化したパスワード
         swot: user.swot || {},
         confidential: user.confidential || {},
       };
-
       batch.set(userRef, userDataToWrite);
 
       // 2. 各ユーザーの items を、サブコレクション radar_items に書き込む

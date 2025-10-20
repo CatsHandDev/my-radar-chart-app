@@ -10,6 +10,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DnsIcon from '@mui/icons-material/Dns';
 import HistoryIcon from '@mui/icons-material/History';
 import Link from 'next/link';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 // --- Propsの型定義 ---
 interface SidebarProps {
@@ -17,9 +18,11 @@ interface SidebarProps {
   activeTab: number;
   onTabChange: (index: number) => void;
   isAdmin: boolean;
+  onLogout: () => void;
+  isLoggedIn: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, isAdmin }) => {
+const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, isAdmin, onLogout, isLoggedIn }) => {
   const [isGuideExpanded, setIsGuideExpanded] = useState(false);
   const navItems = [
     { text: 'データ設定', icon: <SettingsIcon /> },
@@ -102,6 +105,13 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, 
           ))}
         </List>
       </div>
+
+      {isLoggedIn && (
+        <ListItemButton onClick={onLogout}>
+          <ListItemIcon><LogoutIcon /></ListItemIcon>
+          <ListItemText primary="ログアウト" />
+        </ListItemButton>
+      )}
 
       {/* isAdmin が true の場合のみ、職員用メニューを表示 */}
       {isAdmin && (
