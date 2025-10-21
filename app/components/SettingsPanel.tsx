@@ -48,41 +48,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        データ読み込み
-      </Typography>
-      <Box
-        component="form"
-        onSubmit={(e) => { e.preventDefault(); handleFetchClick(); }}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}
-      >
-        <FormControl fullWidth>
-          <InputLabel>利用者を選択</InputLabel>
-          <Select
-            value={selectedUserId}
-            label="利用者を選択"
-            onChange={(e) => setSelectedUserId(e.target.value)}
-          >
-            {allUsers.map(user => (
-              <MenuItem key={user.userId} value={user.userId}>
-                {user.userName}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <TextField
-          label="パスワード"
-          type="password"
-          variant="outlined"
-          size="small"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <Button type="submit" variant="contained">読み込み</Button>
-      </Box>
-
       {dataset && (
         <>
           <Typography variant="h6" gutterBottom>
@@ -146,6 +111,43 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </Box>
         </>
       )}
+
+            <>
+        <Typography variant="h6" gutterBottom>
+          データ読み込み
+        </Typography>
+        <Box
+          component="form"
+          onSubmit={(e) => { e.preventDefault(); handleFetchClick(); }}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}
+        >
+          <FormControl fullWidth>
+            <InputLabel>利用者を選択</InputLabel>
+            <Select
+              value={selectedUserId}
+              label="利用者を選択"
+              onChange={(e) => setSelectedUserId(e.target.value)}
+            >
+              {allUsers.map(user => (
+                <MenuItem key={user.userId} value={user.userId}>
+                  {user.userName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="パスワード"
+            type="password"
+            variant="outlined"
+            size="small"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <Button type="submit" variant="contained">読み込み</Button>
+        </Box>
+      </>
     </Box>
   );
 };
