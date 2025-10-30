@@ -1,163 +1,184 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { Box, Typography, Tabs, Tab, ToggleButtonGroup, ToggleButton, Button } from '@mui/material';
-import { BorderType, UserDataset } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Grid, Box, Select, MenuItem, FormControl, InputLabel, Button, TextField, Typography, ToggleButtonGroup, ToggleButton, Paper } from '@mui/material';
+import { SelectChangeEvent } from '@mui/material/Select';
+import { v4 as uuidv4 } from 'uuid';
 import RadarChart from './RadarChart';
 import SwotMatrix from './SwotMatrix';
-import TabPanel from './TabPanel';
-import styles from './AnalysisPanel.module.scss'
+import AiAdvicePanel from './AiAdvicePanel';
+import { UserDataset, ChartItem, BorderType } from '../types';
 
-export const BORDER_PERCENTAGES: Record<BorderType, number> = { A: 0.65, B: 0.45 };
-
-// --- Propsの型定義 ---
 interface AnalysisPanelProps {
-  // propsとして UserDataset 丸ごと受け取る方が管理しやすい
-  dataset: UserDataset | null;
-  // SWOTの更新ハンドラを追加
-  onSwotChange: (field: 'opportunities' | 'threats', value: string) => void;
+  initialChartData: ChartItem[] | null;
+  allUsers: UserDataset[];
 }
 
-const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ dataset, onSwotChange }) => {
-  // --- このコンポーネントが管理するState ---
+const BORDER_PERCENTAGES: Record<BorderType, number> = { A: 0.66, B: 0.45 };
+
+const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUsers }) => {
+  const [editableItems, setEditableItems] = useState<ChartItem[]>([]);
+  const [chartItems, setChartItems] = useState<ChartItem[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedBorder, setSelectedBorder] = useState<BorderType>('A');
-  const [aiAdvice, setAiAdvice] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState(0);
 
-  // 1. datasetからitemsを安全に取り出す
-  const items = useMemo(() => dataset?.items || [], [dataset]);
+  useEffect(() => {
+    const initialItems = initialChartData || [
+      { id: uuidv4(), label: '項目1', value: 50, maxValue: 100 },
+      { id: uuidv4(), label: '項目2', value: 50, maxValue: 100 },
+      { id: uuidv4(), label: '項目3', value: 50, maxValue: 100 },
+    ];
+    setEditableItems(initialItems);
+    setChartItems(initialItems);
+  }, [initialChartData]);
 
-  // --- 派生状態 ---
-  const chartableItems = useMemo(() => items.filter(item => item.value > 0), [items]);
-  const currentBorderPercentage = BORDER_PERCENTAGES[selectedBorder];
-  const strengths = useMemo(() =>
-    chartableItems.filter(item => (item.value / item.maxValue) >= currentBorderPercentage),
-    [chartableItems, currentBorderPercentage]
-  );
-  const weaknesses = useMemo(() =>
-    chartableItems.filter(item => (item.value / item.maxValue) < currentBorderPercentage),
-    [chartableItems, currentBorderPercentage]
-  );
-
-  // --- ハンドラ ---
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => setActiveTab(newValue);
-  const handleBorderChange = (event: React.MouseEvent<HTMLElement>, newBorder: BorderType | null) => {
-    if (newBorder) setSelectedBorder(newBorder);
-  };
-
-  const handleAnalyze = async () => {
-    setIsLoading(true);
-    setAiAdvice('');
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          borderType: selectedBorder,
-          strengths: strengths.map(item => item.label),
-          weaknesses: weaknesses.map(item => item.label),
-          opportunities: dataset?.swot?.opportunities || '',
-          threats: dataset?.swot?.threats || '',
-          considerations: dataset?.confidential?.considerations || '',
-        }),
-      });
-      if (!response.ok) throw new Error('API request failed');
-      const data = await response.json();
-      setAiAdvice(data.advice);
-    } catch (error) {
-      console.error('AI分析のAPI呼び出しに失敗:', error);
-      setAiAdvice('分析に失敗しました。時間をおいて再度お試しください。');
-    } finally {
-      setIsLoading(false);
+  const handleTemplateChange = (event: SelectChangeEvent) => {
+    const userId = event.target.value;
+    setSelectedTemplateId(userId);
+    const selectedUser = allUsers.find(u => u.userId === userId);
+    if (selectedUser) {
+      const newItems = selectedUser.items.map(item => ({ ...item, id: uuidv4(), value: 0 }));
+      setEditableItems(newItems);
     }
   };
+  
+  // 編集用stateを更新するハンドラ
+  const handleItemChange = (id: string, field: 'label' | 'value', value: string | number) => {
+    setEditableItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+  
+  const handleAddItem = () => {
+    const newItem: ChartItem = { id: uuidv4(), label: '新規項目', value: 0, maxValue: 100 };
+    setChartItems(prev => [...prev, newItem]);
+  }
 
-  // --- レンダリング用のデータ準備 ---
-  const percentageValues = chartableItems.map(item => item.maxValue > 0 ? (item.value / item.maxValue) * 100 : 0);
-  const borderLineValue = currentBorderPercentage * 100;
-  const borderLine = {
-    label: `${selectedBorder === 'A' ? '高い目標' : '基礎目標'} (${Math.round(borderLineValue)}%)`,
-    values: Array(chartableItems.length).fill(borderLineValue),
-    color: selectedBorder === 'A' ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',
+  //「チャートを更新」ボタンのハンドラ
+  const handleUpdateChart = () => {
+    setChartItems(editableItems);
+  };
+  
+    const handleEditableItemChange = (id: string, field: 'label' | 'value', value: string | number) => {
+    setEditableItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === id) {
+          // valueが数値の場合、maxValueを超えないように制御
+          if (field === 'value' && Number(value) > item.maxValue) {
+            return { ...item, [field]: item.maxValue };
+          }
+          return { ...item, [field]: value };
+        }
+        return item;
+      })
+    );
   };
 
-  return (
-    <div className={styles.panelContainer}>
-      <div>
-        <div className={styles.chartContainer}>
-          <RadarChart
-            labels={chartableItems.map(item => item.label)}
-            values={percentageValues}
-            borderLines={[borderLine]}
-          />
-        </div>
+  // 分析対象のユーザー情報を取得
+  const targetUser = allUsers.find(u => u.userId === selectedTemplateId);
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #eee', borderRadius: '8px' }}>
-          <Typography gutterBottom>評価基準の選択</Typography>
-          <ToggleButtonGroup
-            value={selectedBorder}
-            exclusive
-            onChange={handleBorderChange}
-            aria-label="border selection"
-          >
-            <ToggleButton value="A" aria-label="A-rank border">高い目標</ToggleButton>
-            <ToggleButton value="B" aria-label="B-rank border">基礎目標</ToggleButton>
-          </ToggleButtonGroup>
-          <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-            現在の基準: {Math.round(BORDER_PERCENTAGES[selectedBorder] * 100)}%
-          </Typography>
-        </Box>
-      </div>
-      <Box sx={{ width: '100%', mt: 2 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="analysis tabs" centered>
-            <Tab label="SWOT分析" id="analysis-tab-0" />
-            <Tab label="AIアドバイス" id="analysis-tab-1" />
-          </Tabs>
-        </Box>
-        <TabPanel value={activeTab} index={0}>
-          <SwotMatrix
-            strengths={strengths}
-            weaknesses={weaknesses}
-            opportunities={dataset?.swot?.opportunities || ''}
-            setOpportunities={(value) => onSwotChange('opportunities', value)}
-            threats={dataset?.swot?.threats || ''}
-            setThreats={(value) => onSwotChange('threats', value)}
-            borderType={selectedBorder}
-          />
-          <Button
-            variant="contained"
-            onClick={handleAnalyze}
-            disabled={isLoading}
-            fullWidth
-            sx={{ mt: 2, height: 50, maxWidth: '100%' }}
-          >
-            {isLoading ? '分析中...' : 'AIにアドバイスを求める'}
-          </Button>
-        </TabPanel>
-        {/* 2. AIアドバイスタブのコンテンツ */}
-        <TabPanel value={activeTab} index={1}>
-          {/* ★ ボタンを削除し、レスポンス表示コンポーネントのみにする */}
-          <Box sx={{ width: '100%' }}>
-            {aiAdvice ? (
-              // アドバイスがある場合の表示
-              <Box sx={{ p: 2, background: '#f4f4f4', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
-                <Typography variant="h6">AIからのアドバイス</Typography>
-                <Typography component="p">{aiAdvice}</Typography>
-              </Box>
-            ) : (
-              // アドバイスがまだない場合のプレースホルダー表示
-              <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                <Typography>
-                  「SWOT分析」タブのボタンを押すと、ここにAIからのアドバイスが表示されます。
-                </Typography>
-              </Box>
-            )}
+  return (
+    <Grid container spacing={4}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3 }}>
+        {/* 左上: チャート */}
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <RadarChart
+              labels={chartItems.map(item => item.label)}
+              values={chartItems.map(item => (item.value / item.maxValue) * 100)} // パーセンテージに変換
+              borderLines={[{
+                label: `${selectedBorder === 'A' ? '高い目標' : '基礎目標'} (${BORDER_PERCENTAGES[selectedBorder] * 100}%)`,
+                values: Array(chartItems.length).fill(BORDER_PERCENTAGES[selectedBorder] * 100),
+                color: selectedBorder === 'A' ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',
+              }]}
+            />
           </Box>
-        </TabPanel>
+        </Paper>
+
+        <Paper sx={{ p: 2, height: '100%' }}>
+          {/* 右上: セッティング項目 */}
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>項目テンプレートを呼び出し</InputLabel>
+                <Select
+                  value={selectedTemplateId}
+                  onChange={handleTemplateChange}
+                  label="項目テンプレートを呼び出し"
+                >
+                  <MenuItem value="">
+                    <em>選択解除</em>
+                  </MenuItem>
+                  {allUsers.map(user => <MenuItem key={user.userId} value={user.userId}>{user.userName}さんの項目</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Typography variant="subtitle2">項目と数値を自由入力</Typography>
+              {editableItems.map(item => (
+                <Box key={item.id} sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    label="項目名" size="small" value={item.label}
+                    onChange={(e) => handleEditableItemChange(item.id, 'label', e.target.value)}
+                    sx={{ flex: 2 }}
+                  />
+                  <TextField
+                    label="実績値" type="number" size="small" value={item.value}
+                    onChange={(e) => handleEditableItemChange(item.id, 'value', Number(e.target.value))}
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
+              ))}
+              <Button onClick={handleAddItem} variant="outlined">項目を追加</Button>
+
+              {/* チャート更新ボタン */}
+              <Button onClick={handleUpdateChart} variant="contained">チャートを更新</Button>
+
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Typography variant="subtitle2">分析基準の選択</Typography>
+                <ToggleButtonGroup
+                  value={selectedBorder}
+                  exclusive
+                  onChange={(e, newBorder) => { if (newBorder) setSelectedBorder(newBorder); }}
+                  aria-label="border selection"
+                >
+                  <ToggleButton value="A">高い目標 (66%)</ToggleButton>
+                  <ToggleButton value="B">基礎目標 (45%)</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
       </Box>
-    </div>
+      
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3 }}>
+        {/* 左下: SWOT分析 (chartItems を参照) */}
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <SwotMatrix
+              strengths={chartItems.filter(item => (item.value / item.maxValue) >= BORDER_PERCENTAGES[selectedBorder])}
+              weaknesses={chartItems.filter(item => (item.value / item.maxValue) < BORDER_PERCENTAGES[selectedBorder])}
+              opportunities="" // 今はまだ渡せない
+              setOpportunities={() => {}} // ダミー関数
+              threats=""
+              setThreats={() => {}} // ダミー関数
+              borderType={selectedBorder}
+            />
+          </Box>
+        </Paper>
+        
+        {/* 右下: AIアドバイス欄 (chartItems を参照) */}
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <AiAdvicePanel
+              chartItems={chartItems}
+              confidential={targetUser?.confidential}
+              borderType={selectedBorder}
+            />
+          </Box>
+        </Paper>
+      </Box>
+    </Grid>
   );
 };
 

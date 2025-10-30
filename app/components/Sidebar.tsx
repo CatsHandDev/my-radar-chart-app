@@ -1,16 +1,16 @@
+"use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon,
   ListItemText, Typography, Divider, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import DnsIcon from '@mui/icons-material/Dns';
-import HistoryIcon from '@mui/icons-material/History';
-import Link from 'next/link';
+import AnalyticsIcon from '@mui/icons-material/Analytics'; // 分析ページ
+import TableViewIcon from '@mui/icons-material/TableView'; // データページ (DataGrid)
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // 職員用
 import LogoutIcon from '@mui/icons-material/Logout';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 // --- Propsの型定義 ---
 interface SidebarProps {
@@ -24,49 +24,28 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, isAdmin, onLogout, isLoggedIn }) => {
   const [isGuideExpanded, setIsGuideExpanded] = useState(false);
+  // 1. ナビゲーション項目を新しいページ構成に合わせる
   const navItems = [
-    { text: 'データ設定', icon: <SettingsIcon /> },
-    { text: '分析結果', icon: <AnalyticsIcon /> },
-    { text: '作業記録', icon: <HistoryIcon /> },
+    { text: '分析ページ', icon: <AnalyticsIcon /> },
+    { text: 'データページ', icon: <TableViewIcon /> },
   ];
-
+  
+  // 職員でログインしている場合のみ、「職員用」を追加
   if (isAdmin) {
     navItems.push({ text: '職員用', icon: <AdminPanelSettingsIcon /> });
   }
 
-  const handleGuideToggle = () => {
-    setIsGuideExpanded(prev => !prev);
+  // 2. ログアウトハンドラ
+  const handleLogout = () => {
+    // sessionStorageからログイン情報を削除
+    sessionStorage.removeItem('isAdmin');
+    // page.tsxのハンドラを呼び出してstateを更新し、リロードさせる
+    onLogout();
   };
 
-    // ★ 初期データ書き込みAPIを呼び出すハンドラ
-  const handleSeedDatabase = async () => {
-    if (!confirm("本当にデータベースを初期化しますか？既存のデータが上書きされる可能性があります。")) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/seed', { method: 'POST' });
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(data.message);
-        // 成功したらページをリロードして、新しいデータを読み込ませる
-        window.location.reload();
-      } else {
-        throw new Error(data.error || '不明なエラー');
-      }
-    } catch (error) {
-      console.error("Failed to seed database:", error);
-
-      // 1. error が Error オブジェクトのインスタンスであるかチェック
-      if (error instanceof Error) {
-        // 2. チェック後であれば、安全に .message プロパティにアクセスできる
-        alert(`初期化に失敗しました: ${error.message}`);
-      } else {
-        // 3. Error オブジェクトでない、予期しないエラーの場合
-        alert(`初期化中に予期しないエラーが発生しました。`);
-      }
-    }
+  // 3. 使い方ガイドの開閉ハンドラ
+  const handleGuideChange = (event: React.SyntheticEvent, isExpanded: boolean) => {
+    setIsGuideExpanded(isExpanded);
   };
 
   return (
@@ -113,23 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, 
         </ListItemButton>
       )}
 
-      {/* isAdmin が true の場合のみ、職員用メニューを表示 */}
-      {isAdmin && (
-        <>
-          <Divider />
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton onClick={handleSeedDatabase}>
-                <ListItemIcon>
-                  <DnsIcon color="warning" />
-                </ListItemIcon>
-                <ListItemText primary="DB初期化 (開発用)" />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </>
-      )}
-
       {/* ログインしていない場合のみ、隠しリンクを表示 */}
       {!isAdmin && (
         <Link
@@ -154,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, 
         <Box sx={{ p: 1 }}>
           <Accordion
             expanded={isGuideExpanded}
-            onChange={handleGuideToggle}
+            onChange={handleGuideChange}
             disableGutters
             elevation={0}
             sx={{ backgroundColor: 'transparent' }}
