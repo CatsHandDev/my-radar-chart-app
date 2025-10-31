@@ -1,16 +1,26 @@
 import { UserDataset } from "../types";
-import { v4 as uuidv4 } from 'uuid';
+import { itemMaster } from "./itemMaster"; // ★ マスター項目定義をインポート
+
+// ヘルパー関数: マスターから項目定義を取得
+const getItemDef = (label: string) => {
+  const def = itemMaster.find(item => item.label === label);
+  if (!def) {
+    // マスターに定義がない場合はデフォルト値を返す
+    console.warn(`Item master definition not found for: ${label}`);
+    return { label, maxValue: 100 };
+  }
+  return def;
+};
 
 export const userMasterData: UserDataset[] = [
-  // --- Aさん (user-1) の完全なデータ ---
   {
     userId: 'user-1',
     userName: '大村 可南子',
     password_plain: 'pass1234',
     items: [
-      { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },
-      { id: uuidv4(), label: '箱出し', value: 0, maxValue: 400 },
+      { id: "item-1-1", ...getItemDef('段ボール作成'), value: 85 },
+      { id: "item-1-2", ...getItemDef('ピッキング'), value: 70 },
+      { id: "item-1-3", ...getItemDef('箱出し'), value: 90 },
     ],
     swot: {
       opportunities: '',
@@ -29,9 +39,9 @@ export const userMasterData: UserDataset[] = [
     userName: '四宮 直樹',
     password_plain: 'pass5678',
     items: [
-      { id: uuidv4(), label: '段ボール作成', value: 0, maxValue: 140 },
-      { id: uuidv4(), label: 'ピッキング', value: 0, maxValue: 400 },
-      { id: uuidv4(), label: '箱出し', value: 0, maxValue: 400 },
+      { id: "item-2-1", ...getItemDef('段ボール作成'), value: 60 },
+      { id: "item-2-2", ...getItemDef('ピッキング'), value: 95 },
+      { id: "item-2-3", ...getItemDef('清掃スキル'), value: 75 }, // 例として別の項目
     ],
     swot: {
       opportunities: '',

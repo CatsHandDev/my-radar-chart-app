@@ -1,153 +1,98 @@
 "use client";
-import React, { useState } from 'react';
-import { Button, TextField, Box, Typography, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
-import { ChartItem, UserDataset } from '../types';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
+import React from 'react';
+import {
+  Box, Typography, FormControl, InputLabel, Select, MenuItem,
+  TextField, Button, IconButton, Divider, ToggleButtonGroup, ToggleButton
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { ChartItem, UserDataset, BorderType } from '../types';
+import { SelectChangeEvent } from '@mui/material/Select';
+
+// --- Propsの型定義 ---
 interface SettingsPanelProps {
+  // 表示と編集に必要なデータ
+  chartItems: ChartItem[];
   allUsers: UserDataset[];
-  dataset: UserDataset | null;
-  items: ChartItem[];
-  onItemChange: (id: string, field: 'label' | 'value', value: string | number) => void;
+  selectedTemplateId: string;
+  selectedBorder: BorderType;
+
+  // 状態を更新するためのハンドラ
+  onTemplateChange: (event: SelectChangeEvent) => void;
+  onItemChange: (id: string, field: 'label' | 'value' | 'maxValue', value: string | number) => void;
   onAddItem: () => void;
   onRemoveItem: (id: string) => void;
-  onFetchData: (userId: string, password?: string) => void;
-  onNavigateToAnalysis: () => void;
+  onBorderChange: (newBorder: BorderType | null) => void;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
-  allUsers, dataset, items, onItemChange, onAddItem, onRemoveItem, onFetchData, onNavigateToAnalysis
+  chartItems, allUsers, selectedTemplateId, selectedBorder,
+  onTemplateChange, onItemChange, onAddItem, onRemoveItem, onBorderChange
 }) => {
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleFetchClick = () => {
-    if (!selectedUserId) {
-      alert('ユーザーを選択してください。');
-      return;
-    }
-    onFetchData(selectedUserId, password);
-  };
-
-  const handleValueFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
-    if (Number(e.target.value) === 0) {
-      onItemChange(id, 'value', '');
-    }
-  };
-
-  const handleValueBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
-    if (e.target.value === '') {
-      onItemChange(id, 'value', 0);
-    }
-  };
-
-  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
-    const numericValue = Number(e.target.value) || 0;
-    onItemChange(id, 'value', numericValue);
-  };
-
   return (
-    <Box>
-      {dataset && (
-        <>
-          <Typography variant="h6" gutterBottom>
-            {dataset.userId === 'guest' ? 'ワンタイム分析' : `「${dataset.userName}」さんの項目`}
-          </Typography>
-          {items.map(item => (
-            <Box
-              key={item.id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                mb: 2,
-              }}
-            >
-              <TextField
-                label="項目名"
-                variant="outlined"
-                size="small"
-                value={item.label}
-                onChange={(e) => onItemChange(item.id, 'label', e.target.value)}
-                sx={{ flexGrow: 1, minWidth: '150px' }}
-              />
-              <TextField
-                label="実績値"
-                variant="outlined"
-                type="number"
-                size="small"
-                value={item.value}
-                onChange={(e) => handleValueChange(e, item.id)}
-                onFocus={(e) => handleValueFocus(e, item.id)}
-                onBlur={(e) => handleValueBlur(e, item.id)}
-                sx={{ width: '100px' }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ color: 'text.secondary', minWidth: '80px', textAlign: 'left' }}
-              >
-                (基準値: {item.maxValue})
-              </Typography>
-              <Button
-                size="small"
-                color="error"
-                onClick={() => onRemoveItem(item.id)}
-              >
-                削除
-              </Button>
-            </Box>
-          ))}
-          <Button onClick={onAddItem} variant="outlined">項目を追加</Button>
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              endIcon={<ArrowForwardIcon />}
-              onClick={onNavigateToAnalysis} // ★ propsで受け取った関数を呼ぶ
-            >
-              分析結果を見る
-            </Button>
-          </Box>
-        </>
-      )}
+    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Typography variant="h6" gutterBottom>分析設定</Typography>
 
-            <>
-        <Typography variant="h6" gutterBottom>
-          データ読み込み
-        </Typography>
-        <Box
-          component="form"
-          onSubmit={(e) => { e.preventDefault(); handleFetchClick(); }}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}
-        >
-          <FormControl fullWidth>
-            <InputLabel>利用者を選択</InputLabel>
-            <Select
-              value={selectedUserId}
-              label="利用者を選択"
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              {allUsers.map(user => (
-                <MenuItem key={user.userId} value={user.userId}>
-                  {user.userName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      {/* --- メインの入力エリア (スクロール可能) --- */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, overflow: 'auto', pr: 1 }}>
 
-          <TextField
-            label="パスワード"
-            type="password"
-            variant="outlined"
+        <FormControl fullWidth>
+          <InputLabel>項目テンプレート</InputLabel>
+          <Select
+            value={selectedTemplateId}
+            onChange={onTemplateChange}
+            label="項目テンプレート"
             size="small"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+            sx={{ height: 52 }}
+          >
+            <MenuItem value=""><em>選択解除</em></MenuItem>
+            {allUsers.map(user => <MenuItem key={user.userId} value={user.userId}>{user.userName}さんの項目</MenuItem>)}
+          </Select>
+        </FormControl>
 
-          <Button type="submit" variant="contained">読み込み</Button>
-        </Box>
-      </>
+        <Divider sx={{ my: 1 }} />
+
+        <Typography variant="subtitle2">項目と数値 (ワンタイム分析用)</Typography>
+        {chartItems.map(item => (
+          <Box key={item.id} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              label="項目名" size="small" value={item.label}
+              onChange={(e) => onItemChange(item.id, 'label', e.target.value)}
+              sx={{ flexGrow: 1 }}
+            />
+            <TextField
+              label="実績値" type="number" size="small" value={item.value}
+              onChange={(e) => onItemChange(item.id, 'value', Number(e.target.value))}
+              sx={{ width: '100px' }}
+            />
+            <TextField
+              label="基準値" type="number" size="small" value={item.maxValue}
+              onChange={(e) => onItemChange(item.id, 'maxValue', Number(e.target.value))}
+              sx={{ width: '80px' }}
+            />
+            <IconButton onClick={() => onRemoveItem(item.id)} color="error" size="small">
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ))}
+        <Button onClick={onAddItem} variant="outlined" startIcon={<AddIcon />}>項目を追加</Button>
+      </Box>
+
+      {/* --- フッター: 分析基準の選択 --- */}
+      <Box sx={{ mt: 'auto', pt: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Typography variant="subtitle2" align="center">分析基準</Typography>
+        <ToggleButtonGroup
+          value={selectedBorder}
+          exclusive
+          onChange={(e, newBorder) => onBorderChange(newBorder)}
+          fullWidth
+          size="small"
+        >
+          <ToggleButton value="A">高い目標 (65%)</ToggleButton>
+          <ToggleButton value="B">基礎目標 (45%)</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
     </Box>
   );
 };

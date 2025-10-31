@@ -5,6 +5,7 @@ import {
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import { UserDataset, ChartItem } from '../types';
 import { v4 as uuidv4 } from 'uuid'
+import { itemMaster } from '../data/itemMaster';
 
 // --- Props & 型定義 ---
 interface DataGridPanelProps {
@@ -35,7 +36,7 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
   const [rows, setRows] = useState<RowData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectionCount, setSelectionCount] = useState(0);
+  const [, setSelectionCount] = useState(0);
   const apiRef = useGridApiRef();
 
   // --- データ取得 ---
@@ -125,15 +126,8 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
         ? (aggregatedResult.totalQuantity / aggregatedResult.totalMinutes) * 60
         : 0;
 
-      // 基準となる maxValue を allUsers から探す
-      let maxValue = 100; // デフォルト値
-      for (const user of allUsers) {
-        const itemDef = user.items.find(item => item.label === taskName);
-        if (itemDef) {
-          maxValue = itemDef.maxValue;
-          break; // 最初に見つかった定義を使用
-        }
-      }
+      const itemDefinition = itemMaster.find(master => master.label === taskName);
+      const maxValue = itemDefinition ? itemDefinition.maxValue : 100; // 見つからなければデフォルトで100
 
       return {
         id: uuidv4(),
