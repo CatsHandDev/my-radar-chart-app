@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { UserDataset, ChartItem } from './types';
 import { db, userConverter, itemConverter } from './lib/firebase';
-import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 
 import Sidebar from './components/Sidebar';
 import TabPanel from './components/TabPanel';
@@ -61,7 +61,7 @@ export default function Home() {
     try {
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, { confidential: newConfidential });
-      
+
       // フロントエンドの状態も更新
       setAllUsers(prevUsers =>
         prevUsers.map(user =>

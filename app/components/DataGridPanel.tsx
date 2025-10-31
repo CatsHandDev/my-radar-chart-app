@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Button, CircularProgress, Alert, FormControl, InputLabel, Select, MenuItem
-} from '@mui/material';
-import { DataGrid, GridColDef, GridRowId, GridValueGetter, useGridApiRef } from '@mui/x-data-grid';
+  Box, Button, CircularProgress, Alert} from '@mui/material';
+import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import { UserDataset, ChartItem } from '../types';
 import { v4 as uuidv4 } from 'uuid'
 
@@ -18,8 +17,17 @@ interface RowData {
   userName: string;
   taskName: string;
   date: string;
-  quantity: number;
+  quantity: string;
   workMinutes: number;
+}
+
+interface SheetRow {
+  id: string | number;
+  date: string;
+  userName: string;
+  taskName: string;
+  quantity: string | number;
+  minutes: string | number;
 }
 
 const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAnalysis }) => {
@@ -28,7 +36,6 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
-  const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
   const apiRef = useGridApiRef();
 
   // --- データ取得 ---
@@ -41,17 +48,17 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'APIエラー');
 
-        // APIから返されたデータに、対応するuserIdを追加する
-        const fetchedRows: RowData[] = result.data.map((row: any) => {
+        const fetchedRows: RowData[] = result.data.map((row: SheetRow) => {
           const user = allUsers.find(u => u.userName === row.userName);
-          return { ...row, userId: user?.userId || 'unknown' };
+          return {
+            ...row,
+            id: String(row.id), // idを確実にstringにする
+            quantity: Number(row.quantity), // quantityをnumberにする
+            workMinutes: Number(row.minutes), // minutesをnumberにする
+            userId: user?.userId || 'unknown'
+          };
         });
-        
         setRows(fetchedRows);
-        // デフォルトの分析対象ユーザーを設定
-        if (allUsers.length > 0) {
-          setTargetUserId(allUsers[0].userId);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'データ取得失敗');
       } finally {
@@ -88,89 +95,84 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
 
   // --- ハンドラ ---
   const handleAnalyzeClick = () => {
-    console.log("Analyze clicked. Selected IDs:", selectedRowIds);
-    
-    if (selectedRowIds.length === 0) {
+    if (!apiRef.current?.getSelectedRows) return;
+
+    const selectedRowsMap = apiRef.current.getSelectedRows();
+    if (selectedRowsMap.size === 0) {
       alert("分析する記録を1つ以上選択してください。");
       return;
     }
-
-    const selectedIds = new Set(selectedRowIds);
+    const selectedIds = new Set(selectedRowsMap.keys());
     const selectedRows = rows.filter(row => selectedIds.has(row.id));
 
-    // --- 1. 新しい集計ロジック ---
-    // a. 集計用のオブジェクトを準備
-    const aggregation: { [taskName: string]: { totalQuantity: number; totalMinutes: number; count: number } } = {};
+    // --- 1. 集計ロジック (ユーザーで絞り込まない) ---
+    const aggregation: { [taskName: string]: { totalQuantity: number; totalMinutes: number } } = {};
 
-    // b. 選択された行をループして、作業名ごとに「合計数量」と「合計時間」を集計
     selectedRows.forEach(row => {
       const taskName = row.taskName;
       if (!taskName) return;
-
       if (!aggregation[taskName]) {
-        aggregation[taskName] = { totalQuantity: 0, totalMinutes: 0, count: 0 };
+        aggregation[taskName] = { totalQuantity: 0, totalMinutes: 0 };
       }
-
       aggregation[taskName].totalQuantity += Number(row.quantity);
       aggregation[taskName].totalMinutes += Number(row.workMinutes);
-      aggregation[taskName].count += 1;
     });
 
-    // c. 集計結果から、レーダーチャート用の ChartItem[] 配列を作成
-    //    チャートに表示する項目名は、集計結果のキー（作業名）から動的に生成する
+    // --- 2. ChartItem[] の作成 (ユーザーに依存しない) ---
     const aggregatedData: ChartItem[] = Object.keys(aggregation).map(taskName => {
       const aggregatedResult = aggregation[taskName];
-      
-      // 全体の平均効率を計算
       const averageEfficiency = (aggregatedResult.totalMinutes > 0)
         ? (aggregatedResult.totalQuantity / aggregatedResult.totalMinutes) * 60
         : 0;
 
-      // この作業名の基準となる maxValue を allUsers から探す
-      // (どのユーザーの定義でも良いので、最初に見つかったものを採用)
+      // 基準となる maxValue を allUsers から探す
       let maxValue = 100; // デフォルト値
       for (const user of allUsers) {
         const itemDef = user.items.find(item => item.label === taskName);
         if (itemDef) {
           maxValue = itemDef.maxValue;
-          break;
+          break; // 最初に見つかった定義を使用
         }
       }
-        
+
       return {
-        id: uuidv4(), // 新しい項目なのでユニークIDを生成
+        id: uuidv4(),
         label: taskName,
-        value: Math.round(averageEfficiency), // 平均効率を実績値とする
+        value: Math.round(averageEfficiency),
         maxValue: maxValue,
       };
     });
 
     if (aggregatedData.length === 0) {
-        alert("分析可能なデータが選択されていません。");
-        return;
+      alert("分析可能なデータが選択されていません。");
+      return;
     }
-    
-    // --- 2. 親コンポーネントにデータを渡してページ遷移 ---
+
+    // --- 3. 分析ページへ遷移 ---
     onNavigateToAnalysis(aggregatedData);
   };
 
   // 選択状態の変更を監視し、件数を更新する
   const handleSelectionChange = useCallback(() => {
+    // apiRef.current が初期化済みであることを確認
     if (apiRef.current?.getSelectedRows) {
+      // getSelectedRows().size で現在の選択件数を取得し、stateを更新
       setSelectionCount(apiRef.current.getSelectedRows().size);
     }
   }, [apiRef]);
-  
+
   useEffect(() => {
+    // apiRef.current が利用可能になったらイベントを購読
     if (apiRef.current) {
-      // DataGridの `rowSelectionChange` イベントを購読する
+      // 'rowSelectionChange' イベントを購読し、変更があったら handleSelectionChange を呼ぶ
+      // useEffect のクリーンアップ関数で、購読を解除する
       return apiRef.current.subscribeEvent('rowSelectionChange', handleSelectionChange);
     }
   }, [apiRef, handleSelectionChange]);
 
   if (isLoading) return <CircularProgress />;
   if (error) return <Alert severity="error">データ表示エラー: {error}</Alert>;
-  
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
       <Box sx={{ mb: 2, flexShrink: 0, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -183,17 +185,7 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
           rows={rows}
           columns={columns}
           checkboxSelection
-          
-          // ★★★ 2. ここが欠落していた、最も重要な部分 ★★★
-          onRowSelectionModelChange={(newSelectionModel) => {
-            // チェックボックスの状態が変わるたびに、この関数が呼ばれ、
-            // newSelectionModel（IDの配列）で state を更新する
-            setSelectedRowIds(newSelectionModel);
-          }}
-          // ★ 3. DataGridに現在の選択状態を伝える（制御モード）
-          rowSelectionModel={selectedRowIds}
-
-          keepNonExistentRowsSelected
+          apiRef={apiRef}
         />
       </Box>
     </Box>

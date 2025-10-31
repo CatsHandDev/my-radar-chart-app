@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // 1. 環境変数から認証情報を取得
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const sheets = google.sheets({ version: 'v4', auth });
 
     // 3. スプレッドシートからデータを取得
-    const spreadsheetId = '1oI1b3LU6Lilm1ab1Du0WhSKYM0d0VCy8gT6_-_ggVss';
+    const spreadsheetId = '1BJSVnQd2ImkAIA2c7ePpT8jhJ6iLfby7OK_SnqOGlCk';
     const range = '利用者データ記入!B3:F'; // B3からF列の最後まで
 
     const response = await sheets.spreadsheets.values.get({
@@ -39,14 +39,13 @@ export async function GET(request: Request) {
 
     // 4. 取得したデータをJSON形式に整形
     const header = ['date', 'userName', 'taskName', 'quantity', 'minutes'];
-    const formattedData = rows.map((row, index) => {
-      let rowData: { [key: string]: any } = { id: index }; // DataGrid用にidを付与
+    const formattedData = rows.map((row: (string | number)[], index) => {
+      const rowData: { [key: string]: string | number } = { id: index };
       header.forEach((key, i) => {
         rowData[key] = row[i];
       });
       return rowData;
     });
-
     return NextResponse.json({ data: formattedData }, { status: 200 });
 
   } catch (error) {
