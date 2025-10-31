@@ -14,10 +14,9 @@ interface AnalysisPanelProps {
   allUsers: UserDataset[];
 }
 
-const BORDER_PERCENTAGES: Record<BorderType, number> = { A: 0.66, B: 0.45 };
+const BORDER_PERCENTAGES: Record<BorderType, number> = { A: 0.65, B: 0.45 };
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUsers }) => {
-  const [editableItems, setEditableItems] = useState<ChartItem[]>([]);
   const [chartItems, setChartItems] = useState<ChartItem[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedBorder, setSelectedBorder] = useState<BorderType>('A');
@@ -28,7 +27,6 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
       { id: uuidv4(), label: '項目2', value: 50, maxValue: 100 },
       { id: uuidv4(), label: '項目3', value: 50, maxValue: 100 },
     ];
-    setEditableItems(initialItems);
     setChartItems(initialItems);
   }, [initialChartData]);
 
@@ -38,34 +36,15 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
     const selectedUser = allUsers.find(u => u.userId === userId);
     if (selectedUser) {
       const newItems = selectedUser.items.map(item => ({ ...item, id: uuidv4(), value: 0 }));
-      setEditableItems(newItems);
+      setChartItems(newItems);
     }
   };
   
   // 編集用stateを更新するハンドラ
   const handleItemChange = (id: string, field: 'label' | 'value', value: string | number) => {
-    setEditableItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
-  };
-  
-  const handleAddItem = () => {
-    const newItem: ChartItem = { id: uuidv4(), label: '新規項目', value: 0, maxValue: 100 };
-    setChartItems(prev => [...prev, newItem]);
-  }
-
-  //「チャートを更新」ボタンのハンドラ
-  const handleUpdateChart = () => {
-    setChartItems(editableItems);
-  };
-  
-    const handleEditableItemChange = (id: string, field: 'label' | 'value', value: string | number) => {
-    setEditableItems(prevItems =>
+    setChartItems(prevItems =>
       prevItems.map(item => {
         if (item.id === id) {
-          // valueが数値の場合、maxValueを超えないように制御
           if (field === 'value' && Number(value) > item.maxValue) {
             return { ...item, [field]: item.maxValue };
           }
@@ -75,16 +54,21 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
       })
     );
   };
+  
+  const handleAddItem = () => {
+    const newItem: ChartItem = { id: uuidv4(), label: '新規項目', value: 0, maxValue: 100 };
+    setChartItems(prev => [...prev, newItem]); // ★ chartItems を更新
+  };
 
   // 分析対象のユーザー情報を取得
   const targetUser = allUsers.find(u => u.userId === selectedTemplateId);
 
   return (
     <Grid container spacing={4}>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3, width: '100%' }}>
         {/* 左上: チャート */}
-        <Paper sx={{ p: 2, height: '100%' }}>
-          <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1 }}>
+          <Paper sx={{ p: 2, height: '100%' }}>
             <RadarChart
               labels={chartItems.map(item => item.label)}
               values={chartItems.map(item => (item.value / item.maxValue) * 100)} // パーセンテージに変換
@@ -94,12 +78,12 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
                 color: selectedBorder === 'A' ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 159, 64, 1)',
               }]}
             />
-          </Box>
-        </Paper>
+          </Paper>
+        </Box>
 
-        <Paper sx={{ p: 2, height: '100%' }}>
+        <Box sx={{ flex: 1, width: '40%' }}>
           {/* 右上: セッティング項目 */}
-          <Box sx={{ flex: 1 }}>
+          <Paper sx={{ p: 2, height: '100%' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <FormControl fullWidth>
                 <InputLabel>項目テンプレートを呼び出し</InputLabel>
@@ -115,16 +99,16 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
                 </Select>
               </FormControl>
               <Typography variant="subtitle2">項目と数値を自由入力</Typography>
-              {editableItems.map(item => (
+              {chartItems.map(item => (
                 <Box key={item.id} sx={{ display: 'flex', gap: 1 }}>
                   <TextField
                     label="項目名" size="small" value={item.label}
-                    onChange={(e) => handleEditableItemChange(item.id, 'label', e.target.value)}
+                    onChange={(e) => handleItemChange(item.id, 'label', e.target.value)}
                     sx={{ flex: 2 }}
                   />
                   <TextField
                     label="実績値" type="number" size="small" value={item.value}
-                    onChange={(e) => handleEditableItemChange(item.id, 'value', Number(e.target.value))}
+                    onChange={(e) => handleItemChange(item.id, 'value', Number(e.target.value))}
                     sx={{ flex: 1 }}
                   />
                 </Box>
@@ -132,7 +116,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
               <Button onClick={handleAddItem} variant="outlined">項目を追加</Button>
 
               {/* チャート更新ボタン */}
-              <Button onClick={handleUpdateChart} variant="contained">チャートを更新</Button>
+              {/* <Button onClick={handleUpdateChart} variant="contained">チャートを更新</Button> */}
 
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography variant="subtitle2">分析基準の選択</Typography>
@@ -142,19 +126,19 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
                   onChange={(e, newBorder) => { if (newBorder) setSelectedBorder(newBorder); }}
                   aria-label="border selection"
                 >
-                  <ToggleButton value="A">高い目標 (66%)</ToggleButton>
+                  <ToggleButton value="A">高い目標 (65%)</ToggleButton>
                   <ToggleButton value="B">基礎目標 (45%)</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
             </Box>
-          </Box>
-        </Paper>
+          </Paper>
+        </Box>
       </Box>
       
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3, width: '100%' }}>
         {/* 左下: SWOT分析 (chartItems を参照) */}
-        <Paper sx={{ p: 2, height: '100%' }}>
-          <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1 }}>
+          <Paper sx={{ p: 2, height: '100%' }}>
             <SwotMatrix
               strengths={chartItems.filter(item => (item.value / item.maxValue) >= BORDER_PERCENTAGES[selectedBorder])}
               weaknesses={chartItems.filter(item => (item.value / item.maxValue) < BORDER_PERCENTAGES[selectedBorder])}
@@ -164,19 +148,19 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ initialChartData, allUser
               setThreats={() => {}} // ダミー関数
               borderType={selectedBorder}
             />
-          </Box>
-        </Paper>
+          </Paper>
+        </Box>
         
         {/* 右下: AIアドバイス欄 (chartItems を参照) */}
-        <Paper sx={{ p: 2, height: '100%' }}>
-          <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, width: '40%' }}>
+          <Paper sx={{ p: 2, height: '100%' }}>
             <AiAdvicePanel
               chartItems={chartItems}
               confidential={targetUser?.confidential}
               borderType={selectedBorder}
             />
-          </Box>
-        </Paper>
+          </Paper>
+        </Box>
       </Box>
     </Grid>
   );
