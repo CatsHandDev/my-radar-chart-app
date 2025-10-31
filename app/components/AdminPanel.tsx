@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete, Chip, Button } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
 import { UserDataset } from '../types';
 
 interface AdminPanelProps {
@@ -22,25 +22,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ allUsers, onUpdateUser }) => {
     setCurrentUserData(allUsers.find(u => u.userId === selectedUserId) || null);
   }, [selectedUserId, allUsers]);
 
-  const handleConfidentialChange = (field: string, value: any) => {
-    if (!currentUserData) return;
-    setCurrentUserData(prev => ({
-      ...prev!,
-      confidential: {
-        ...prev!.confidential,
-        [field]: value
-      }
-    }));
-  };
-
   const handleSave = () => {
     if(currentUserData) {
       onUpdateUser(currentUserData.userId, currentUserData.confidential);
     }
   };
-  
-  const disabilityOptions = ['精神障害', '発達障害', '身体障害', '知的障害'];
-  const characteristicOptions = ['不安が強い', '完璧主義', '聴覚過敏', '視覚過敏', '疲れやすい', '集中が続きにくい'];
 
   return (
     <Box>

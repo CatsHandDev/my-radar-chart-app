@@ -31,13 +31,13 @@ export async function POST(request: Request) {
     // 2. ユーザーが存在する場合
     const userData = userDocSnap.data();
     const storedHash = userData.passwordHash;
-    
+
     // パスワードを比較
     const passwordMatch = await bcrypt.compare(password, storedHash);
 
     if (passwordMatch) {
       // 認証成功 (この部分は変更なし)
-      const { passwordHash, ...userWithoutPassword } = userData;
+      const { ...userWithoutPassword } = userData;
       return NextResponse.json({
         success: true,
         user: { userId: userDocSnap.id, ...userWithoutPassword },

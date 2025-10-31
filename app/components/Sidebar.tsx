@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon,
   ListItemText, Typography, Divider, Accordion, AccordionSummary, AccordionDetails
@@ -29,21 +28,13 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, activeTab, onTabChange, 
     { text: '分析ページ', icon: <AnalyticsIcon /> },
     { text: 'データページ', icon: <TableViewIcon /> },
   ];
-  
+
   // 職員でログインしている場合のみ、「職員用」を追加
   if (isAdmin) {
     navItems.push({ text: '職員用', icon: <AdminPanelSettingsIcon /> });
   }
 
-  // 2. ログアウトハンドラ
-  const handleLogout = () => {
-    // sessionStorageからログイン情報を削除
-    sessionStorage.removeItem('isAdmin');
-    // page.tsxのハンドラを呼び出してstateを更新し、リロードさせる
-    onLogout();
-  };
-
-  // 3. 使い方ガイドの開閉ハンドラ
+  // 使い方ガイドの開閉ハンドラ
   const handleGuideChange = (event: React.SyntheticEvent, isExpanded: boolean) => {
     setIsGuideExpanded(isExpanded);
   };
