@@ -11,7 +11,6 @@ import TabPanel from './components/TabPanel';
 import AnalysisPanel from './components/AnalysisPanel';
 import DataGridPanel from './components/DataGridPanel';
 import AdminPanel from './components/AdminPanel';
-import { useAuth } from '../hooks/useAuth';
 
 const drawerWidth = 240;
 
@@ -20,7 +19,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState(0);
   const [transientChartData, setTransientChartData] = useState<ChartItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { isAdmin, setIsAdmin } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchAllUsers = async () => {
