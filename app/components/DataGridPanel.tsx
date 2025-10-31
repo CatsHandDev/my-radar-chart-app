@@ -157,6 +157,7 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
     // apiRef.current が初期化済みであることを確認
     if (apiRef.current?.getSelectedRows) {
       // getSelectedRows().size で現在の選択件数を取得し、stateを更新
+      console.log(apiRef.current.getSelectedRows().size);
       setSelectionCount(apiRef.current.getSelectedRows().size);
     }
   }, [apiRef]);
