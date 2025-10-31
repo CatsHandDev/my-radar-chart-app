@@ -178,7 +178,7 @@ const DataGridPanel: React.FC<DataGridPanelProps> = ({ allUsers, onNavigateToAna
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 100px)' }}>
       <Box sx={{ mb: 2, flexShrink: 0, display: 'flex', gap: 2, alignItems: 'center' }}>
         <Button onClick={handleAnalyzeClick} variant="contained">
-          選択した記録で分析 ({selectionCount}件)
+          選択した記録で分析
         </Button>
       </Box>
       <Box sx={{ flexGrow: 1, width: '100%' }}>
